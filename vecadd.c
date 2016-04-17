@@ -1,10 +1,3 @@
-// Code derives from example in “Heterogeneous Computing with OpenCL” 
-// published 2011 by Morgan Kaufmann
-
-
-// This program implements a vector addition using OpenCL
-
-// System includes
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -17,7 +10,32 @@
 // add of two arrays                        
 char* programSource ="";
 
+#define k 5
+
+struct Node{
+    int end1;
+    int end2;
+    int cost;
+};
+
+struct Node graph[k*(k-1)/2];
+
+int create_graph(){
+    // k is the number of vertices
+    // then the number of nodes is k(k-1)/2
+    int count = 0;
+    for (int i = 0; i<k-1; i++){
+        for (int j = i+1; j < k; j++){
+            struct Node n = {i, j, 1};
+            graph[count] = n;
+            count = count + 1;
+        }
+    }
+    return 0;
+} 
+
 int read_program(){
+    // read the program from file
     char * buffer = 0;
     long length;
     FILE * f = fopen ("program.c", "rb");
@@ -32,11 +50,13 @@ int read_program(){
       fclose (f);
     }
     programSource = buffer;
+    return 0;
 }
 
 int main() {
     //read data from the file
     read_program();
+    create_graph();
     
     // Host data
     int *A = NULL;  // Input array
