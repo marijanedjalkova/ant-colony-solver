@@ -8,30 +8,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/types.h>
 
 // OpenCL includes
 #include <CL/cl.h>
 
 // OpenCL kernel to perform an element-wise 
 // add of two arrays                        
-const char* programSource =
-"__kernel                                            \n"
-"void vecadd(__global int *A,                        \n"
-"            __global int *B,                        \n"
-"            __global int *C)                        \n"
-"{                                                   \n"
-"                                                    \n"
-"   // Get the work-item’s unique ID                 \n"
-"   int idx = get_global_id(0);                      \n"
-"                                                    \n"
-"   // Add the corresponding locations of            \n"
-"   // 'A' and 'B', and store the result in 'C'.     \n"
-"   C[idx] = A[idx] + B[idx];                        \n"
-"}                                                   \n"
-;
+char* programSource ="";
+
+int read_program(){
+    char * buffer = 0;
+    long length;
+    FILE * f = fopen ("program.c", "rb");
+    if (f){
+      fseek (f, 0, SEEK_END);
+      length = ftell (f);
+      fseek (f, 0, SEEK_SET);
+      buffer = malloc (length);
+      if (buffer){
+        fread (buffer, 1, length, f);
+      }
+      fclose (f);
+    }
+    programSource = buffer;
+}
 
 int main() {
-    // This code executes on the OpenCL host
+    //read data from the file
+    read_program();
     
     // Host data
     int *A = NULL;  // Input array
