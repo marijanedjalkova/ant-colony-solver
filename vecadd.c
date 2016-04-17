@@ -57,7 +57,7 @@ int main() {
     //read data from the file
     read_program();
     create_graph();
-    
+    int ants[k] = {0, 1, 2, 3, 4};
     // Host data
     int *A = NULL;  // Input array
     int *B = NULL;  // Input array
