@@ -14,6 +14,18 @@ char* programSource ="";
 
 int * graph = NULL;
 int * output = NULL;
+cl_kernel kernel = NULL;
+cl_platform_id *platforms = NULL;
+cl_device_id *devices = NULL;
+cl_int status;  
+cl_mem bufferGraph; // input
+cl_mem bufferOutput; // output
+cl_context context = NULL;   
+cl_command_queue cmdQueue;
+int elements;
+size_t datasize;
+bool stop = false;
+cl_program program;
 
 int create_graph(int elements){
     int lasti = 0;
@@ -75,37 +87,24 @@ int read_program(){
     return 0;
 }
 
-int main() {
-    //read data from the file
-    
-    int elements = k*(k-1)/2;
-    size_t datasize = sizeof(int)*4*elements;
+void initialise(){
+    elements = k*(k-1)/2;
+    datasize = sizeof(int)*4*elements;
     graph = (int*)malloc(sizeof(int)*datasize);
     output = (int*)malloc(sizeof(int)*datasize);
     read_program();
     create_graph(elements);
     initialise_output(elements);
     
-    // Use this to check the output of each API call
-    cl_int status;  
-     
     //-----------------------------------------------------
     // STEP 1: Discover and initialize the platforms
     //-----------------------------------------------------
     
     cl_uint numPlatforms = 0;
-    cl_platform_id *platforms = NULL;
-    
-    // Use clGetPlatformIDs() to retrieve the number of 
-    // platforms
     status = clGetPlatformIDs(0, NULL, &numPlatforms);
- 
-    // Allocate enough space for each platform
     platforms =   
         (cl_platform_id*)malloc(
             numPlatforms*sizeof(cl_platform_id));
- 
-    // Fill in platforms with clGetPlatformIDs()
     status = clGetPlatformIDs(numPlatforms, platforms, 
                 NULL);
 
@@ -114,10 +113,6 @@ int main() {
     //----------------------------------------------------- 
     
     cl_uint numDevices = 0;
-    cl_device_id *devices = NULL;
-
-    // Use clGetDeviceIDs() to retrieve the number of 
-    // devices present
     status = clGetDeviceIDs(
         platforms[0], 
         CL_DEVICE_TYPE_ALL, 
@@ -125,12 +120,10 @@ int main() {
         NULL, 
         &numDevices);
 
-    // Allocate enough space for each device
     devices = 
         (cl_device_id*)malloc(
             numDevices*sizeof(cl_device_id));
 
-    // Fill in devices with clGetDeviceIDs()
     status = clGetDeviceIDs(
         platforms[0], 
         CL_DEVICE_TYPE_ALL,        
@@ -140,12 +133,8 @@ int main() {
 
     //-----------------------------------------------------
     // STEP 3: Create a context
-    //----------------------------------------------------- 
-    
-    cl_context context = NULL;
+    //-----------------------------------------------------
 
-    // Create a context using clCreateContext() and 
-    // associate it with the devices
     context = clCreateContext(
         NULL, 
         numDevices, 
@@ -157,12 +146,7 @@ int main() {
     //-----------------------------------------------------
     // STEP 4: Create a command queue
     //----------------------------------------------------- 
-    
-    cl_command_queue cmdQueue;
 
-    // Create a command queue using clCreateCommandQueue(),
-    // and associate it with the device you want to execute 
-    // on
     cmdQueue = clCreateCommandQueue(
         context, 
         devices[0], 
@@ -172,12 +156,7 @@ int main() {
     //-----------------------------------------------------
     // STEP 5: Create device buffers
     //----------------------------------------------------- 
-    
-    cl_mem bufferGraph; // input
-    cl_mem bufferOutput; // output
 
-    // Use clCreateBuffer() to create a buffer object (d_A) 
-    // that will contain the data from the host array A
     bufferGraph = clCreateBuffer(
         context, 
         CL_MEM_READ_ONLY,                         
@@ -185,8 +164,6 @@ int main() {
         NULL, 
         &status);
 
-    // Use clCreateBuffer() to create a buffer object (d_C) 
-    // with enough space to hold the output data
     bufferOutput = clCreateBuffer(
         context, 
         CL_MEM_WRITE_ONLY,                 
@@ -213,16 +190,13 @@ int main() {
     // STEP 7: Create and compile the program
     //----------------------------------------------------- 
      
-    // Create a program using clCreateProgramWithSource()
-    cl_program program = clCreateProgramWithSource(
+    program = clCreateProgramWithSource(
         context, 
         1, 
         (const char**)&programSource,                                 
         NULL, 
         &status);
 
-    // Build (compile) the program for the devices with
-    // clBuildProgram()
     status = clBuildProgram(
         program, 
         numDevices, 
@@ -235,9 +209,14 @@ int main() {
     // STEP 8: Create the kernel
     //----------------------------------------------------- 
 
-    cl_kernel kernel = NULL;
     kernel = clCreateKernel(program, "findRoute", &status);
+}
 
+bool finished(){
+    return stop == true;
+}
+
+void construct_solution(){
     //-----------------------------------------------------
     // STEP 9: Set the kernel arguments
     //----------------------------------------------------- 
@@ -260,13 +239,7 @@ int main() {
     // STEP 10: Configure the work-item structure
     //----------------------------------------------------- 
     
-    // Define an index space (global work size) of work 
-    // items for 
-    // execution. A workgroup size (local work size) is not 
-    // required, 
-    // but can be used.
     size_t globalWorkSize[1];    
-    // There are 'elements' work-items 
     globalWorkSize[0] = elements;
 
     //-----------------------------------------------------
@@ -317,7 +290,23 @@ int main() {
         }
         
     }
-    
+
+}
+
+void global_update_pheromones(){
+
+}
+
+int aco(){
+    initialise();
+    while (!finished()){
+        construct_solution();
+        global_update_pheromones();
+        stop = true;
+    }
+}
+
+void cleanup(){
     //-----------------------------------------------------
     // STEP 13: Release OpenCL resources
     //----------------------------------------------------- 
@@ -335,4 +324,11 @@ int main() {
     free(output);
     free(platforms);
     free(devices);
+}
+
+int main() {
+    //read data from the file
+    aco();
+    cleanup();
+    
 }
