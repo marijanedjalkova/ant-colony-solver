@@ -19,6 +19,8 @@ struct Node{
 };
 
 struct Node graph[k*(k-1)/2];
+int pheromones[k*(k-1)/2];
+struct Node output[k*(k-1)/2];
 
 int create_graph(){
     // k is the number of vertices
@@ -57,27 +59,12 @@ int main() {
     //read data from the file
     read_program();
     create_graph();
-    int ants[k] = {0, 1, 2, 3, 4};
     // Host data
-    int *A = NULL;  // Input array
-    int *B = NULL;  // Input array
-    int *C = NULL;  // Output array
-    
-    // Elements in each array
-    const int elements = 2048;   
-    
+       
     // Compute the size of the data 
-    size_t datasize = sizeof(int)*elements;
+    int elements = k*(k-1)/2;
+    size_t datasize = sizeof(struct Node)*elements;
 
-    // Allocate space for input/output data
-    A = (int*)malloc(datasize);
-    B = (int*)malloc(datasize);
-    C = (int*)malloc(datasize);
-    // Initialize the input data
-    for(int i = 0; i < elements; i++) {
-        A[i] = i;
-        B[i] = i;
-    }
 
     // Use this to check the output of each API call
     cl_int status;  
@@ -166,13 +153,13 @@ int main() {
     // STEP 5: Create device buffers
     //----------------------------------------------------- 
     
-    cl_mem bufferA;  // Input array on the device
-    cl_mem bufferB;  // Input array on the device
-    cl_mem bufferC;  // Output array on the device
+    cl_mem bufferGraph; // input
+    cl_mem bufferPheromones;
+    cl_mem bufferOutput; // output
 
     // Use clCreateBuffer() to create a buffer object (d_A) 
     // that will contain the data from the host array A
-    bufferA = clCreateBuffer(
+    bufferGraph = clCreateBuffer(
         context, 
         CL_MEM_READ_ONLY,                         
         datasize, 
@@ -181,7 +168,7 @@ int main() {
 
     // Use clCreateBuffer() to create a buffer object (d_B)
     // that will contain the data from the host array B
-    bufferB = clCreateBuffer(
+    bufferPheromones = clCreateBuffer(
         context, 
         CL_MEM_READ_ONLY,                         
         datasize, 
@@ -190,7 +177,7 @@ int main() {
 
     // Use clCreateBuffer() to create a buffer object (d_C) 
     // with enough space to hold the output data
-    bufferC = clCreateBuffer(
+    bufferOutput = clCreateBuffer(
         context, 
         CL_MEM_WRITE_ONLY,                 
         datasize, 
@@ -205,24 +192,22 @@ int main() {
     // the device buffer bufferA
     status = clEnqueueWriteBuffer(
         cmdQueue, 
-        bufferA, 
+        bufferGraph, 
         CL_FALSE, 
         0, 
         datasize,                         
-        A, 
+        graph, 
         0, 
         NULL, 
         NULL);
     
-    // Use clEnqueueWriteBuffer() to write input array B to 
-    // the device buffer bufferB
     status = clEnqueueWriteBuffer(
         cmdQueue, 
-        bufferB, 
+        bufferPheromones, 
         CL_FALSE, 
         0, 
-        datasize,                                  
-        B, 
+        datasize,                         
+        pheromones, 
         0, 
         NULL, 
         NULL);
@@ -254,10 +239,7 @@ int main() {
     //----------------------------------------------------- 
 
     cl_kernel kernel = NULL;
-
-    // Use clCreateKernel() to create a kernel from the 
-    // vector addition function (named "vecadd")
-    kernel = clCreateKernel(program, "vecadd", &status);
+    kernel = clCreateKernel(program, "findRoute", &status);
 
     //-----------------------------------------------------
     // STEP 9: Set the kernel arguments
@@ -270,17 +252,17 @@ int main() {
         kernel, 
         0, 
         sizeof(cl_mem), 
-        &bufferA);
+        &bufferGraph);
     status |= clSetKernelArg(
         kernel, 
         1, 
         sizeof(cl_mem), 
-        &bufferB);
+        &bufferPheromones);
     status |= clSetKernelArg(
         kernel, 
         2, 
         sizeof(cl_mem), 
-        &bufferC);
+        &bufferOutput);
 
     //-----------------------------------------------------
     // STEP 10: Configure the work-item structure
@@ -323,27 +305,24 @@ int main() {
     // to the host output array (C)
     clEnqueueReadBuffer(
         cmdQueue, 
-        bufferC, 
+        bufferOutput, 
         CL_TRUE, 
         0, 
         datasize, 
-        C, 
+        output, 
         0, 
         NULL, 
         NULL);
 
     // Verify the output
-    bool result = true;
+
     for(int i = 0; i < elements; i++) {
-        if(C[i] != i+i) {
-            result = false;
-            break;
-        }
+        printf("%d - %d \n", output[i].end1, output[i].end2);
     }
-    if(result) {
-        printf("Output is correct\n");
+    if(output) {
+        printf("Output exists\n");
     } else {
-        printf("Output is incorrect\n");
+        printf("Output does not exist\n");
     }
 
     //-----------------------------------------------------
@@ -354,15 +333,15 @@ int main() {
     clReleaseKernel(kernel);
     clReleaseProgram(program);
     clReleaseCommandQueue(cmdQueue);
-    clReleaseMemObject(bufferA);
-    clReleaseMemObject(bufferB);
-    clReleaseMemObject(bufferC);
+    clReleaseMemObject(bufferGraph);
+    clReleaseMemObject(bufferPheromones);
+    clReleaseMemObject(bufferOutput);
     clReleaseContext(context);
 
     // Free host resources
-    free(A);
-    free(B);
-    free(C);
+    //free(graph);
+    //free(pheromones);
+    //free(output);
     free(platforms);
     free(devices);
 }
