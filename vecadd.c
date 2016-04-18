@@ -17,6 +17,7 @@ int * output = NULL;
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
+size_t globalWorkSize[1];
 cl_int status;  
 cl_mem bufferGraph; // input
 cl_mem bufferOutput; // output
@@ -196,6 +197,9 @@ void initialise(){
         (const char**)&programSource,                                 
         NULL, 
         &status);
+    if (status<0){
+        fprintf(stderr, "%s\n", "Error while creating program");
+    }
 
     status = clBuildProgram(
         program, 
@@ -210,10 +214,18 @@ void initialise(){
     //----------------------------------------------------- 
 
     kernel = clCreateKernel(program, "findRoute", &status);
+    if (status<0){
+        fprintf(stderr, "%s\n", "Error while creating kernel");
+    }
+
+    //-----------------------------------------------------
+    // STEP 10: Configure the work-item structure
+    //----------------------------------------------------- 
+    
+        
+    globalWorkSize[0] = k;
+
 }
-
-
-
 
 bool finished(){
     return stop == true;
@@ -223,7 +235,7 @@ void process_result(){
     for(int i = 0; i < elements; i++) {
         for (int j = 0; j < 4; j++){
             if (j==0){
-                printf("Afer pulling: %d - %d \n", output[i*4+j], output[i*4+j+1]);
+                printf("Afer pulling: %d - %d, %d, %d \n", output[i*4+j], output[i*4+j+1], output[i*4+j+2], output[i*4+j+3]);
             }
         }
         
@@ -258,10 +270,7 @@ void construct_solution(){
     //-----------------------------------------------------
     // STEP 9: Set the kernel arguments
     //----------------------------------------------------- 
-    
-    // Associate the input and output buffers with the 
-    // kernel 
-    // using clSetKernelArg()
+ 
     status  = clSetKernelArg(
         kernel, 
         0, 
@@ -273,12 +282,6 @@ void construct_solution(){
         sizeof(cl_mem), 
         &bufferOutput);
 
-    //-----------------------------------------------------
-    // STEP 10: Configure the work-item structure
-    //----------------------------------------------------- 
-    
-    size_t globalWorkSize[1];    
-    globalWorkSize[0] = elements;
 
     //-----------------------------------------------------
     // STEP 11: Enqueue the kernel for execution
@@ -294,14 +297,11 @@ void construct_solution(){
         0, 
         NULL, 
         NULL);
-    for(int i = 0; i < elements; i++) {
-        for (int j = 0; j < 4; j++){
-            if (j==0){
-                printf("Before pulling: %d - %d \n", output[i*4+j], output[i*4+j+1]);
-            }
-        }
-        
+
+    if (status < 0) {
+        fprintf(stderr, "%s\n", "Error in the end!");
     }
+    
     //-----------------------------------------------------
     // STEP 12: Read the output buffer back to the host
     //----------------------------------------------------- 
@@ -318,7 +318,6 @@ void construct_solution(){
         NULL);
 
     process_result();
-
 }
 
 int aco(){
