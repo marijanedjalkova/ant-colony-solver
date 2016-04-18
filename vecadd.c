@@ -12,29 +12,49 @@ char* programSource ="";
 
 #define k 5
 
-struct Node{
-    int end1;
-    int end2;
-    int cost;
-};
+int * graph = NULL;
+int * output = NULL;
 
-struct Node graph[k*(k-1)/2];
-int pheromones[k*(k-1)/2];
-struct Node output[k*(k-1)/2];
-
-int create_graph(){
-    // k is the number of vertices
-    // then the number of nodes is k(k-1)/2
-    int count = 0;
-    for (int i = 0; i<k-1; i++){
-        for (int j = i+1; j < k; j++){
-            struct Node n = {i, j, 1};
-            graph[count] = n;
-            count = count + 1;
+int create_graph(int elements){
+    int lasti = 0;
+    int lastj = 1;
+    for (int i = 0; i < elements; i++){
+        for (int j = 0; j < 4; j++){
+            if (j==0){
+                if (lastj==5){
+                    lasti = lasti + 1;
+                    lastj = lasti + 1;
+                }
+                graph[i*4+j] = lasti;
+                lastj = lastj + 1;
+            }
+            if (j == 1){
+                if (lastj==5){
+                    lasti = lasti + 1;
+                    lastj = lasti + 1;
+                }
+                graph[i*4+j] = lastj;
+                lastj = lastj + 1;
+            }
+            if (j == 2){
+                // cost
+                graph[i*4+j] = 1;
+            }
+            if (j = 3){
+                //pheromones
+                graph[i*4+j] = 0;
+            }
         }
     }
     return 0;
 } 
+
+int initialise_output(int elements){
+    for (int i = 0; i < elements*4; i++){
+        output[i] = 0;
+    }
+    return 0;
+}
 
 int read_program(){
     // read the program from file
@@ -57,15 +77,15 @@ int read_program(){
 
 int main() {
     //read data from the file
-    read_program();
-    create_graph();
-    // Host data
-       
-    // Compute the size of the data 
+    
     int elements = k*(k-1)/2;
-    size_t datasize = sizeof(struct Node)*elements;
-
-
+    size_t datasize = sizeof(int)*4*elements;
+    graph = (int*)malloc(sizeof(int)*datasize);
+    output = (int*)malloc(sizeof(int)*datasize);
+    read_program();
+    create_graph(elements);
+    initialise_output(elements);
+    
     // Use this to check the output of each API call
     cl_int status;  
      
@@ -154,21 +174,11 @@ int main() {
     //----------------------------------------------------- 
     
     cl_mem bufferGraph; // input
-    cl_mem bufferPheromones;
     cl_mem bufferOutput; // output
 
     // Use clCreateBuffer() to create a buffer object (d_A) 
     // that will contain the data from the host array A
     bufferGraph = clCreateBuffer(
-        context, 
-        CL_MEM_READ_ONLY,                         
-        datasize, 
-        NULL, 
-        &status);
-
-    // Use clCreateBuffer() to create a buffer object (d_B)
-    // that will contain the data from the host array B
-    bufferPheromones = clCreateBuffer(
         context, 
         CL_MEM_READ_ONLY,                         
         datasize, 
@@ -188,8 +198,6 @@ int main() {
     // STEP 6: Write host data to device buffers
     //----------------------------------------------------- 
     
-    // Use clEnqueueWriteBuffer() to write input array A to
-    // the device buffer bufferA
     status = clEnqueueWriteBuffer(
         cmdQueue, 
         bufferGraph, 
@@ -197,17 +205,6 @@ int main() {
         0, 
         datasize,                         
         graph, 
-        0, 
-        NULL, 
-        NULL);
-    
-    status = clEnqueueWriteBuffer(
-        cmdQueue, 
-        bufferPheromones, 
-        CL_FALSE, 
-        0, 
-        datasize,                         
-        pheromones, 
         0, 
         NULL, 
         NULL);
@@ -257,11 +254,6 @@ int main() {
         kernel, 
         1, 
         sizeof(cl_mem), 
-        &bufferPheromones);
-    status |= clSetKernelArg(
-        kernel, 
-        2, 
-        sizeof(cl_mem), 
         &bufferOutput);
 
     //-----------------------------------------------------
@@ -281,10 +273,6 @@ int main() {
     // STEP 11: Enqueue the kernel for execution
     //----------------------------------------------------- 
     
-    // Execute the kernel by using 
-    // clEnqueueNDRangeKernel().
-    // 'globalWorkSize' is the 1D dimension of the 
-    // work-items
     status = clEnqueueNDRangeKernel(
         cmdQueue, 
         kernel, 
@@ -295,14 +283,18 @@ int main() {
         0, 
         NULL, 
         NULL);
-
+    for(int i = 0; i < elements; i++) {
+        for (int j = 0; j < 4; j++){
+            if (j==0){
+                printf("Before pulling: %d - %d \n", output[i*4+j], output[i*4+j+1]);
+            }
+        }
+        
+    }
     //-----------------------------------------------------
     // STEP 12: Read the output buffer back to the host
     //----------------------------------------------------- 
-    
-    // Use clEnqueueReadBuffer() to read the OpenCL output  
-    // buffer (bufferC) 
-    // to the host output array (C)
+
     clEnqueueReadBuffer(
         cmdQueue, 
         bufferOutput, 
@@ -314,17 +306,18 @@ int main() {
         NULL, 
         NULL);
 
+    printf("%s\n", programSource);
+    
     // Verify the output
-
     for(int i = 0; i < elements; i++) {
-        printf("%d - %d \n", output[i].end1, output[i].end2);
+        for (int j = 0; j < 4; j++){
+            if (j==0){
+                printf("Afer pulling: %d - %d \n", output[i*4+j], output[i*4+j+1]);
+            }
+        }
+        
     }
-    if(output) {
-        printf("Output exists\n");
-    } else {
-        printf("Output does not exist\n");
-    }
-
+    
     //-----------------------------------------------------
     // STEP 13: Release OpenCL resources
     //----------------------------------------------------- 
@@ -334,14 +327,12 @@ int main() {
     clReleaseProgram(program);
     clReleaseCommandQueue(cmdQueue);
     clReleaseMemObject(bufferGraph);
-    clReleaseMemObject(bufferPheromones);
     clReleaseMemObject(bufferOutput);
     clReleaseContext(context);
 
     // Free host resources
-    //free(graph);
-    //free(pheromones);
-    //free(output);
+    free(graph);
+    free(output);
     free(platforms);
     free(devices);
 }
