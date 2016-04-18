@@ -212,8 +212,46 @@ void initialise(){
     kernel = clCreateKernel(program, "findRoute", &status);
 }
 
+
+
+
 bool finished(){
     return stop == true;
+}
+
+void process_result(){
+    for(int i = 0; i < elements; i++) {
+        for (int j = 0; j < 4; j++){
+            if (j==0){
+                printf("Afer pulling: %d - %d \n", output[i*4+j], output[i*4+j+1]);
+            }
+        }
+        
+    }
+}
+
+void global_update_pheromones(){
+
+}
+
+void cleanup(){
+    //-----------------------------------------------------
+    // STEP 13: Release OpenCL resources
+    //----------------------------------------------------- 
+    
+    // Free OpenCL resources
+    clReleaseKernel(kernel);
+    clReleaseProgram(program);
+    clReleaseCommandQueue(cmdQueue);
+    clReleaseMemObject(bufferGraph);
+    clReleaseMemObject(bufferOutput);
+    clReleaseContext(context);
+
+    // Free host resources
+    free(graph);
+    free(output);
+    free(platforms);
+    free(devices);
 }
 
 void construct_solution(){
@@ -279,21 +317,7 @@ void construct_solution(){
         NULL, 
         NULL);
 
-    printf("%s\n", programSource);
-    
-    // Verify the output
-    for(int i = 0; i < elements; i++) {
-        for (int j = 0; j < 4; j++){
-            if (j==0){
-                printf("Afer pulling: %d - %d \n", output[i*4+j], output[i*4+j+1]);
-            }
-        }
-        
-    }
-
-}
-
-void global_update_pheromones(){
+    process_result();
 
 }
 
@@ -306,29 +330,7 @@ int aco(){
     }
 }
 
-void cleanup(){
-    //-----------------------------------------------------
-    // STEP 13: Release OpenCL resources
-    //----------------------------------------------------- 
-    
-    // Free OpenCL resources
-    clReleaseKernel(kernel);
-    clReleaseProgram(program);
-    clReleaseCommandQueue(cmdQueue);
-    clReleaseMemObject(bufferGraph);
-    clReleaseMemObject(bufferOutput);
-    clReleaseContext(context);
-
-    // Free host resources
-    free(graph);
-    free(output);
-    free(platforms);
-    free(devices);
-}
-
 int main() {
-    //read data from the file
     aco();
-    cleanup();
-    
+    cleanup(); 
 }
