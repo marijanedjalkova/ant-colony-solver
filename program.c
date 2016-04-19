@@ -8,13 +8,15 @@ bool not_visited(__global int* output, int position){
 	return true;
 } 
 
-void add_nominative(__global double* next_moves, double nomin){
+void add_nominative(__global double* next_moves, double nomin, int node){
 	int i = 0;
 	bool done = false;
 	for (i = 0; i < 5; i++){
 		if (!done){
-			if (next_moves[i]<0){
-				next_moves[i] = nomin;
+			int index = i*2;
+			if (next_moves[index]<0){
+				next_moves[index] = nomin;
+				next_moves[index+1] = node;
 				done = true;
 			}
 		}
@@ -28,13 +30,18 @@ double get_random(){
     return lfsr / 10.0;
 }
 
+int get_next_move(__global double* next_moves, double random){
+	// every other value is possibility and which node it is
+
+    return 0;
+}
+
 
 __kernel                                            
 void findRoute(__global int *graph,
 			__global double* next_moves,                        
             __global int *output)                        
-{
-	// assume output is of side k*4? 
+{ 
 	
 	float alpha = 2.0;
 	float beta = 2.0;             
@@ -45,7 +52,8 @@ void findRoute(__global int *graph,
     	int edge_start = i*4;
    	    if (graph[edge_start]==current_position){
    	    	// can take this node
-   	    	if (not_visited(output, edge_start)){
+   	    	int possible_goal = edge_start;
+   	    	if (not_visited(output, possible_goal)){
 			    int end2 = graph[edge_start + 1];
 			    int cost = graph[edge_start + 2];
 			    int pheromones = graph[edge_start + 3];
@@ -53,16 +61,27 @@ void findRoute(__global int *graph,
 			    double attr = pow(cost, -beta);
 			    double nomin = thao * attr;
 			    sum = sum + nomin;
-			    add_nominative(next_moves, nomin);
+			    add_nominative(next_moves, nomin, possible_goal);
    	    	}
    	    } else if (graph[edge_start+1]==current_position){
-
+   	    	int possible_goal = edge_start + 1;
+   	    	if (not_visited(output, possible_goal)){
+   	    		int end2 = graph[edge_start];
+			    int cost = graph[edge_start + 2];
+			    int pheromones = graph[edge_start + 3];
+			    double thao = pow(pheromones, alpha);
+			    double attr = pow(cost, -beta);
+			    double nomin = thao * attr;
+			    sum = sum + nomin;
+			    add_nominative(next_moves, nomin, possible_goal);
+   	    	}
    	    }
     }
     for (int i = 0; i < 5; i++){
     	next_moves[i] = next_moves[i] / sum;
     }
     double random = get_random();
+    current_position = get_next_move(next_moves, random);
     
     
     

@@ -95,7 +95,7 @@ void initialise(){
     elements = k*(k-1)/2;
     datasize = sizeof(int)*4*elements;
     graphDatasize = sizeof(int)*4*elements;
-    nextDatasize = sizeof(double)*k;
+    nextDatasize = sizeof(double)*k*2;
     outputDatasize = sizeof(int)*k*k;
     graph = (int*)malloc(sizeof(int)*datasize);
     output = (int*)malloc(sizeof(int)*datasize);
