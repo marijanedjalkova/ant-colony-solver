@@ -15,7 +15,7 @@ const int k = 5;
 int * graph = NULL;
 int * output = NULL;
 double * next_moves = NULL;
-
+char* messages = NULL;
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
@@ -25,10 +25,11 @@ cl_mem bufferGraph; // input
 cl_mem bufferOutput; // output
 cl_mem bufferNext;
 cl_mem bufferK;
+cl_mem bufferMsgs;
 cl_context context = NULL;   
 cl_command_queue cmdQueue;
 int elements;
-size_t datasize, graphDatasize, nextDatasize, outputDatasize;
+size_t datasize, graphDatasize, nextDatasize, outputDatasize, msgSize;
 bool stop = false;
 cl_program program;
 
@@ -103,6 +104,7 @@ void initialise(){
     for (int i = 0; i <k; i++){
         next_moves[i] = -1;
     }
+    messages = (char*)malloc(sizeof(char)*2048);
     read_program();
     create_graph(elements);
     initialise_output(elements);
@@ -195,6 +197,13 @@ void initialise(){
         outputDatasize, 
         NULL, 
         &status);
+
+    bufferMsgs = clCreateBuffer(
+        context, 
+        CL_MEM_WRITE_ONLY,                 
+        msgSize, 
+        NULL, 
+        &status);
     
     //-----------------------------------------------------
     // STEP 6: Write host data to device buffers
@@ -281,6 +290,9 @@ void process_result(){
     for(int i = 0; i < k; i++) {
         printf("Output: %d \n", output[i]);
     }
+    for(int i = 0; i < 10; i++){
+        printf("Messages: %s\n", messages[i]);
+    }
 }
 
 void global_update_pheromones(){
@@ -332,6 +344,11 @@ void construct_solution(){
         3, 
         sizeof(cl_mem), 
         &bufferK);
+    status |= clSetKernelArg(
+        kernel, 
+        4, 
+        sizeof(cl_mem), 
+        &bufferMsgs);
 
     if (status < 0) {
         fprintf(stderr, "%s\n", "Error when setting arguments!");
@@ -366,6 +383,17 @@ void construct_solution(){
         0, 
         datasize, 
         output, 
+        0, 
+        NULL, 
+        NULL);
+
+    clEnqueueReadBuffer(
+        cmdQueue, 
+        bufferMsgs, 
+        CL_TRUE, 
+        0, 
+        msgSize, 
+        messages, 
         0, 
         NULL, 
         NULL);

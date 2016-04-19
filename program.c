@@ -73,7 +73,8 @@ __kernel
 void findRoute(__global int *graph,
 			__global double* next_moves,                        
 			__global int *output,
-			__constant int* constK
+			__global int* constK,
+			__global char* messages
 			)                        
 { 	
 
