@@ -30,9 +30,22 @@ double get_random(){
 	return lfsr / 10.0;
 }
 
-int get_next_move(__global double* next_moves, double random){
+int get_next_move(__global double* next_moves, double random, int k){
 	// every other value is possibility and which node it is
-
+	for (int c = 0 ; c < ( k*2 - 1 ); c = c+2){
+	    for (int d = 0 ; d < (k*2 - c - 2); d = d +2){
+	        if (next_moves[d] > next_moves[d+2]){
+		        double poss  = next_moves[d];
+		        int link = next_moves[d+1];
+		        next_moves[d]   = next_moves[d+2];
+		        next_moves[d+1] = next_moves[d+2+1];
+		        next_moves[d+2] = poss;
+		        next_moves[d+2+1] = link;
+	        }
+	    }
+    }
+    // now the records are sorted by the possibility
+    // can choose the smallest value that is bigger 
 	return 0;
 }
 
@@ -94,7 +107,7 @@ void findRoute(__global int *graph,
 			next_moves[i] = next_moves[i] / sum;
 		}
 		double random = get_random();
-		int a = get_next_move(next_moves, random);
+		int a = get_next_move(next_moves, random, k);
 		current_position = a;
 	}
 	
