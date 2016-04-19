@@ -42,12 +42,9 @@ void findRoute(__global int *graph,
 			    int end2 = graph[edge_start + 1];
 			    int cost = graph[edge_start + 2];
 			    int pheromones = graph[edge_start + 3];
-			    double nomin = 0.0;
-			    double thao = 0.0;
-			    double attr = 0.0;
-			    thao = pow(pheromones, alpha);
-			    attr = pow(cost, -beta);
-			    nomin = thao * attr;
+			    double thao = pow(pheromones, alpha);
+			    double attr = pow(cost, -beta);
+			    double nomin = thao * attr;
 			    sum = sum + nomin;
 			    add_nominative(next_moves, nomin);
    	    	}
