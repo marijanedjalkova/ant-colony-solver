@@ -66,11 +66,10 @@ int create_graph(int elements){
     return 0;
 } 
 
-int initialise_output(int elements){
+void initialise_output(int elements){
     for (int i = 0; i < elements*4; i++){
-        output[i] = 0;
+        output[i] = -1;
     }
-    return 0;
 }
 
 int read_program(){
@@ -97,7 +96,7 @@ void initialise(){
     datasize = sizeof(int)*4*elements;
     graphDatasize = sizeof(int)*4*elements;
     nextDatasize = sizeof(double)*k*2;
-    outputDatasize = sizeof(int)*k*k;
+    outputDatasize = sizeof(int)*k;
     graph = (int*)malloc(sizeof(int)*datasize);
     output = (int*)malloc(sizeof(int)*datasize);
     next_moves = (double*)malloc(sizeof(double)*k);
@@ -279,13 +278,8 @@ bool finished(){
 }
 
 void process_result(){
-    for(int i = 0; i < elements; i++) {
-        for (int j = 0; j < 4; j++){
-            if (j==0){
-                printf("Afer pulling: %d - %d, %d, %d \n", output[i*4+j], output[i*4+j+1], output[i*4+j+2], output[i*4+j+3]);
-            }
-        }
-        
+    for(int i = 0; i < k; i++) {
+        printf("Output: %d \n", output[i]);
     }
 }
 
