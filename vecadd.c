@@ -33,38 +33,48 @@ size_t datasize, graphDatasize, nextDatasize, outputDatasize, msgSize;
 bool stop = false;
 cl_program program;
 
-int create_graph(int elements){
+void print_graph(int elements){
+    for (int i = 0; i < elements; i++){
+        int j = i *4;
+        printf("Node: %d - %d, cost: %d, pheromones: %d \n", graph[j], graph[j+1], graph[j+2], graph[j+3]);
+    }
+}
+
+void create_graph(int elements){
     int lasti = 0;
     int lastj = 1;
     for (int i = 0; i < elements; i++){
         for (int j = 0; j < 4; j++){
             if (j==0){
-                if (lastj==5){
+                if (lastj == k){
                     lasti = lasti + 1;
                     lastj = lasti + 1;
                 }
                 graph[i*4+j] = lasti;
-                lastj = lastj + 1;
-            }
+                continue;
+            } 
             if (j == 1){
-                if (lastj==5){
+                if (lastj == k){
                     lasti = lasti + 1;
                     lastj = lasti + 1;
                 }
                 graph[i*4+j] = lastj;
                 lastj = lastj + 1;
-            }
+                continue;
+            }  
             if (j == 2){
                 // cost
                 graph[i*4+j] = 1;
-            }
+                continue;
+            }  
             if (j = 3){
                 //pheromones
-                graph[i*4+j] = 0;
+                graph[i*4+j] = i % 7 + 1;
+                continue;
             }
         }
     }
-    return 0;
+    print_graph(elements);
 } 
 
 void initialise_output(int k){
@@ -98,21 +108,18 @@ void initialise(){
     graphDatasize = sizeof(int)*4*elements;
     nextDatasize = sizeof(double)*k*2;
     outputDatasize = sizeof(int)*k;
-    graph = (int*)malloc(sizeof(int)*datasize);
+    graph = (int*)malloc(graphDatasize);
     output = (int*)malloc(outputDatasize);
     next_moves = (double*)malloc(nextDatasize);
     for (int i = 0; i <k; i++){
         next_moves[i] = -1;
     }
-    /*
-    printf("Before creating messages\n");
+
     msgSize = sizeof(char)*1000;
     messages = (char*)malloc(msgSize);
     for (int i = 0; i < 1000; i++){
         messages[i] = '.';
     }
-    printf("After creating messages\n");
-    */
     read_program();
     create_graph(elements);
     initialise_output(k);
@@ -194,7 +201,7 @@ void initialise(){
 
     bufferK = clCreateBuffer(
         context, 
-        CL_MEM_READ_WRITE,                 
+        CL_MEM_READ_ONLY,                 
         sizeof(int), 
         NULL, 
         &status);
@@ -206,13 +213,13 @@ void initialise(){
         NULL, 
         &status);
     
-    /*bufferMsgs = clCreateBuffer(
+    bufferMsgs = clCreateBuffer(
         context, 
         CL_MEM_READ_WRITE,                 
         msgSize, 
         NULL, 
         &status);
-    */
+    
     if (status<0){
         fprintf(stderr, "Error while creating a buffer\n");
     }
@@ -265,6 +272,18 @@ void initialise(){
         NULL, 
         NULL);
 
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferMsgs, 
+        CL_TRUE, 
+        0, 
+        msgSize,                         
+        messages, 
+        0, 
+        NULL, 
+        NULL);
+
+
     //-----------------------------------------------------
     // STEP 7: Create and compile the program
     //----------------------------------------------------- 
@@ -311,13 +330,14 @@ bool finished(){
 }
 
 void process_result(){
+    
     for(int i = 0; i < k; i++) {
         printf("Output: %d \n", output[i]);
     }
-    /*
-    for(int i = 0; i < 5; i++){
-        printf("Messages:%d %s\n",i, messages[i]);
-    }*/
+    
+    for(int i = 0; i < 20; i++){
+        printf("Messages:%d %c\n",i, messages[i]);
+    }
 }
 
 void global_update_pheromones(){
@@ -335,11 +355,15 @@ void cleanup(){
     clReleaseCommandQueue(cmdQueue);
     clReleaseMemObject(bufferGraph);
     clReleaseMemObject(bufferOutput);
+    clReleaseMemObject(bufferNext);
+    clReleaseMemObject(bufferMsgs);
     clReleaseContext(context);
 
     // Free host resources
     free(graph);
     free(output);
+    free(messages);
+    free(next_moves);
     free(platforms);
     free(devices);
 }
@@ -372,12 +396,12 @@ void construct_solution(){
         3, 
         sizeof(cl_mem), 
         &bufferK);
-    /*
+    
     status |= clSetKernelArg(
         kernel, 
         4, 
         sizeof(cl_mem), 
-        &bufferMsgs);*/
+        &bufferMsgs);
 
     if (status < 0) {
         fprintf(stderr, "%s\n", "Error when setting arguments!");
@@ -416,7 +440,7 @@ void construct_solution(){
         NULL, 
         NULL);
 
-    /*clEnqueueReadBuffer(
+    clEnqueueReadBuffer(
         cmdQueue, 
         bufferMsgs, 
         CL_TRUE, 
@@ -425,7 +449,7 @@ void construct_solution(){
         messages, 
         0, 
         NULL, 
-        NULL);*/
+        NULL);
 
     printf("Read the output\n");
     process_result();
