@@ -1,7 +1,6 @@
 bool not_visited(__global int* output, __global int* graph, int position, int k){
 	for (int i = 0; i < k; i++){
-		int current_position = i * 4;
-		if (output[current_position] == graph[position]){
+		if (output[i] == graph[position]){
 			return false;
 		}
 	}
@@ -27,7 +26,13 @@ double get_random(){
 	unsigned short lfsr = 0xACE1u;
 	unsigned bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
 	lfsr =  (lfsr >> 1) | (bit << 15);
-	return lfsr / 10.0;
+	double res = lfsr* 1.0;
+	if (res>1){
+		while(res > 1){
+			res = res / 10.0;
+		}
+	}
+	return res;
 }
 
 int get_next_move(__global double* next_moves, double random, int k){
@@ -46,8 +51,11 @@ int get_next_move(__global double* next_moves, double random, int k){
     }*/
 	double sum = 0.0;
 	int choice = -1;
-	for (int i = 0; i<k*2; i=i+2){
+	int i=0;
+	bool done = false;
+	for (i = 0; i<k*2; i=i+2){
 		if ((sum + next_moves[i])>=random){
+			done = true;
 			choice = next_moves[i+1];
 			// i + 1 because returning the second value from the tuple
 			//(possibility, index_in_graph)
@@ -55,6 +63,9 @@ int get_next_move(__global double* next_moves, double random, int k){
 		} else {
 			sum = sum + next_moves[i];
 		}
+	}
+	if (!done){
+		choice = next_moves[k*2-1];
 	}
 	return choice;
 }
@@ -73,14 +84,13 @@ __kernel
 void findRoute(__global int *graph,
 			__global double* next_moves,                        
 			__global int *output,
-			__global int* constK,
-			__global char* messages
+			__global int* constK
+			/*__global char* messages*/
 			)                        
 { 	
 
 	int k = constK[0];
-	messages[0] = "k=";
-	messages[1] = k;
+	//messages[0] = 'k';
 	//next_moves has size k*2
 	// graph has size edges*4
 	// output has size k?
@@ -141,12 +151,12 @@ void findRoute(__global int *graph,
 				// e.g. edge 2-1 and we are in 1. Put 2 in output and into current pos
 				next_node = graph[edge_choice_index];
 			}
-			add_to_array(output, k, next_node);
+			//add_to_array(output, k, next_node);
 			current_position = next_node;
 		} else {
 			return;
 		}
-		
+		possible_to_move = false; // TODO remove this
 	}
 	
 } 

@@ -67,8 +67,8 @@ int create_graph(int elements){
     return 0;
 } 
 
-void initialise_output(int elements){
-    for (int i = 0; i < elements*4; i++){
+void initialise_output(int k){
+    for (int i = 0; i < k; i++){
         output[i] = -1;
     }
 }
@@ -99,15 +99,23 @@ void initialise(){
     nextDatasize = sizeof(double)*k*2;
     outputDatasize = sizeof(int)*k;
     graph = (int*)malloc(sizeof(int)*datasize);
-    output = (int*)malloc(sizeof(int)*datasize);
-    next_moves = (double*)malloc(sizeof(double)*k);
+    output = (int*)malloc(outputDatasize);
+    next_moves = (double*)malloc(nextDatasize);
     for (int i = 0; i <k; i++){
         next_moves[i] = -1;
     }
-    messages = (char*)malloc(sizeof(char)*2048);
+    /*
+    printf("Before creating messages\n");
+    msgSize = sizeof(char)*1000;
+    messages = (char*)malloc(msgSize);
+    for (int i = 0; i < 1000; i++){
+        messages[i] = '.';
+    }
+    printf("After creating messages\n");
+    */
     read_program();
     create_graph(elements);
-    initialise_output(elements);
+    initialise_output(k);
     
     //-----------------------------------------------------
     // STEP 1: Discover and initialize the platforms
@@ -197,13 +205,17 @@ void initialise(){
         outputDatasize, 
         NULL, 
         &status);
-
-    bufferMsgs = clCreateBuffer(
+    
+    /*bufferMsgs = clCreateBuffer(
         context, 
-        CL_MEM_WRITE_ONLY,                 
+        CL_MEM_READ_WRITE,                 
         msgSize, 
         NULL, 
         &status);
+    */
+    if (status<0){
+        fprintf(stderr, "Error while creating a buffer\n");
+    }
     
     //-----------------------------------------------------
     // STEP 6: Write host data to device buffers
@@ -212,7 +224,7 @@ void initialise(){
     status = clEnqueueWriteBuffer(
         cmdQueue, 
         bufferGraph, 
-        CL_FALSE, 
+        CL_TRUE, 
         0, 
         graphDatasize,                         
         graph, 
@@ -223,7 +235,7 @@ void initialise(){
     status = clEnqueueWriteBuffer(
         cmdQueue, 
         bufferNext, 
-        CL_FALSE, 
+        CL_TRUE, 
         0, 
         nextDatasize,                         
         graph, 
@@ -234,10 +246,21 @@ void initialise(){
     status = clEnqueueWriteBuffer(
         cmdQueue, 
         bufferK, 
-        CL_FALSE, 
+        CL_TRUE, 
         0, 
         sizeof(int),                         
         &k, 
+        0, 
+        NULL, 
+        NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferOutput, 
+        CL_TRUE, 
+        0, 
+        outputDatasize,                         
+        output, 
         0, 
         NULL, 
         NULL);
@@ -271,13 +294,14 @@ void initialise(){
     kernel = clCreateKernel(program, "findRoute", &status);
     if (status<0){
         fprintf(stderr, "%s\n", "Error while creating kernel");
+    } else {
+        printf("Kernel built successfully\n");
     }
 
     //-----------------------------------------------------
     // STEP 10: Configure the work-item structure
     //----------------------------------------------------- 
-    
-        
+  
     globalWorkSize[0] = k;
 
 }
@@ -290,9 +314,10 @@ void process_result(){
     for(int i = 0; i < k; i++) {
         printf("Output: %d \n", output[i]);
     }
-    for(int i = 0; i < 10; i++){
-        printf("Messages: %s\n", messages[i]);
-    }
+    /*
+    for(int i = 0; i < 5; i++){
+        printf("Messages:%d %s\n",i, messages[i]);
+    }*/
 }
 
 void global_update_pheromones(){
@@ -329,30 +354,34 @@ void construct_solution(){
         0, 
         sizeof(cl_mem), 
         &bufferGraph);
+
     status |= clSetKernelArg(
         kernel, 
         1, 
         sizeof(cl_mem), 
         &bufferNext);
+
     status |= clSetKernelArg(
         kernel, 
         2, 
         sizeof(cl_mem), 
         &bufferOutput);
+
     status |= clSetKernelArg(
         kernel, 
         3, 
         sizeof(cl_mem), 
         &bufferK);
+    /*
     status |= clSetKernelArg(
         kernel, 
         4, 
         sizeof(cl_mem), 
-        &bufferMsgs);
+        &bufferMsgs);*/
 
     if (status < 0) {
         fprintf(stderr, "%s\n", "Error when setting arguments!");
-    }
+    } 
     //-----------------------------------------------------
     // STEP 11: Enqueue the kernel for execution
     //----------------------------------------------------- 
@@ -381,13 +410,13 @@ void construct_solution(){
         bufferOutput, 
         CL_TRUE, 
         0, 
-        datasize, 
+        outputDatasize, 
         output, 
         0, 
         NULL, 
         NULL);
 
-    clEnqueueReadBuffer(
+    /*clEnqueueReadBuffer(
         cmdQueue, 
         bufferMsgs, 
         CL_TRUE, 
@@ -396,8 +425,9 @@ void construct_solution(){
         messages, 
         0, 
         NULL, 
-        NULL);
+        NULL);*/
 
+    printf("Read the output\n");
     process_result();
 }
 
