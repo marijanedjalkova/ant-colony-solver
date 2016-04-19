@@ -21,6 +21,13 @@ void add_nominative(__global double* next_moves, double nomin){
 	}
 }
 
+double get_random(){
+	unsigned short lfsr = 0xACE1u;
+	unsigned bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
+    lfsr =  (lfsr >> 1) | (bit << 15);
+    return lfsr / 10.0;
+}
+
 
 __kernel                                            
 void findRoute(__global int *graph,
@@ -55,6 +62,7 @@ void findRoute(__global int *graph,
     for (int i = 0; i < 5; i++){
     	next_moves[i] = next_moves[i] / sum;
     }
+    double random = get_random();
     
     
     
