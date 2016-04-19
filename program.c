@@ -1,7 +1,7 @@
-bool not_visited(__global int* output, int position){
+bool not_visited(__global int* output, __global int* graph, int position){
 	for (int i = 0; i < 5; i++){
 		int current_position = i * 4;
-		if (output[current_position] == position){
+		if (output[current_position] == graph[position]){
 			return false;
 		}
 	}
@@ -47,13 +47,13 @@ void findRoute(__global int *graph,
 	float beta = 2.0;             
     int start_position = get_global_id(0);
     int current_position = start_position;
-    double sum = 0.1;
+    double sum = 0.0;
     for (int i = 0; i < 10; i++){
     	int edge_start = i*4;
    	    if (graph[edge_start]==current_position){
    	    	// can take this node
    	    	int possible_goal = edge_start;
-   	    	if (not_visited(output, possible_goal)){
+   	    	if (not_visited(output, graph, possible_goal+1)){
 			    int end2 = graph[edge_start + 1];
 			    int cost = graph[edge_start + 2];
 			    int pheromones = graph[edge_start + 3];
@@ -65,7 +65,7 @@ void findRoute(__global int *graph,
    	    	}
    	    } else if (graph[edge_start+1]==current_position){
    	    	int possible_goal = edge_start + 1;
-   	    	if (not_visited(output, possible_goal)){
+   	    	if (not_visited(output, graph, possible_goal-1)){
    	    		int end2 = graph[edge_start];
 			    int cost = graph[edge_start + 2];
 			    int pheromones = graph[edge_start + 3];
