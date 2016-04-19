@@ -32,7 +32,7 @@ double get_random(){
 
 int get_next_move(__global double* next_moves, double random, int k){
 	// every other value is possibility and which node it is
-	for (int c = 0 ; c < ( k*2 - 1 ); c = c+2){
+	/*for (int c = 0 ; c < ( k*2 - 1 ); c = c+2){
 	    for (int d = 0 ; d < (k*2 - c - 2); d = d +2){
 	        if (next_moves[d] > next_moves[d+2]){
 		        double poss  = next_moves[d];
@@ -43,10 +43,29 @@ int get_next_move(__global double* next_moves, double random, int k){
 		        next_moves[d+2+1] = link;
 	        }
 	    }
-    }
-    // now the records are sorted by the possibility
-    // can choose the smallest value that is bigger 
-	return 0;
+    }*/
+	double sum = 0.0;
+	int choice = -1;
+	for (int i = 0; i<k*2; i=i+2){
+		if ((sum + next_moves[i])>=random){
+			choice = next_moves[i+1];
+			// i + 1 because returning the second value from the tuple
+			//(possibility, index_in_graph)
+			break;
+		} else {
+			sum = sum + next_moves[i];
+		}
+	}
+	return choice;
+}
+
+void add_to_array(__global int *output, int size, int value){
+	for (int i = 0; i < size; i++){
+		if (output[i] == -1){
+			output[i] = value;
+			return;
+		}
+	}
 }
 
 
@@ -59,9 +78,9 @@ void findRoute(__global int *graph,
 { 	
 
 	int k = constK[0];
-	//nextmoves has size k
+	//next_moves has size k*2
 	// graph has size edges*4
-	// output has size k*2?
+	// output has size k?
 	int num_edges = k*(k-1)/2;
 	float alpha = 2.0;
 	float beta = 2.0;             
@@ -103,12 +122,28 @@ void findRoute(__global int *graph,
 				}
 			}
 		}
-		for (int i = 0; i < k; i++){
-			next_moves[i] = next_moves[i] / sum;
+		if (possible_to_move){
+			for (int i = 0; i < k; i++){
+				next_moves[i] = next_moves[i] / sum;
+			}
+			double random = get_random();
+			int edge_choice_index = get_next_move(next_moves, random, k);
+			// in that edge, one value is our current position and the other value
+			// is the next node
+			int next_node = -1;
+			if (current_position == graph[edge_choice_index]){
+				// e.g. edge 1-2 and we are in 1. Put 2 in output and into current pos
+				next_node = graph[edge_choice_index + 1];
+			} else {
+				// e.g. edge 2-1 and we are in 1. Put 2 in output and into current pos
+				next_node = graph[edge_choice_index];
+			}
+			add_to_array(output, k, next_node);
+			current_position = next_node;
+		} else {
+			return;
 		}
-		double random = get_random();
-		int a = get_next_move(next_moves, random, k);
-		current_position = a;
+		
 	}
 	
 } 
