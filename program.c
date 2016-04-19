@@ -40,13 +40,16 @@ int get_next_move(__global double* next_moves, double random){
 __kernel                                            
 void findRoute(__global int *graph,
 			__global double* next_moves,                        
-            __global int *output)                        
+            __global int *output,
+            __constant int* k
+            )                        
 { 
-	
+	int localK = k;
 	float alpha = 2.0;
 	float beta = 2.0;             
     int start_position = get_global_id(0);
     int current_position = start_position;
+    // starting from here everything should be looped
     double sum = 0.0;
     for (int i = 0; i < 10; i++){
     	int edge_start = i*4;
@@ -81,7 +84,8 @@ void findRoute(__global int *graph,
     	next_moves[i] = next_moves[i] / sum;
     }
     double random = get_random();
-    current_position = get_next_move(next_moves, random);
+    int a = get_next_move(next_moves, random);
+    current_position = a;
     
     
     

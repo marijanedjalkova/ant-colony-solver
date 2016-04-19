@@ -10,7 +10,7 @@
 // add of two arrays                        
 char* programSource ="";
 
-#define k 5
+const int k = 5;
 
 int * graph = NULL;
 int * output = NULL;
@@ -24,6 +24,7 @@ cl_int status;
 cl_mem bufferGraph; // input
 cl_mem bufferOutput; // output
 cl_mem bufferNext;
+cl_mem bufferK;
 cl_context context = NULL;   
 cl_command_queue cmdQueue;
 int elements;
@@ -182,6 +183,13 @@ void initialise(){
         NULL, 
         &status);
 
+    bufferK = clCreateBuffer(
+        context, 
+        CL_MEM_READ_WRITE,                 
+        sizeof(int), 
+        NULL, 
+        &status);
+
     bufferOutput = clCreateBuffer(
         context, 
         CL_MEM_READ_WRITE,                 
@@ -211,6 +219,17 @@ void initialise(){
         0, 
         nextDatasize,                         
         graph, 
+        0, 
+        NULL, 
+        NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferK, 
+        CL_FALSE, 
+        0, 
+        sizeof(int),                         
+        &k, 
         0, 
         NULL, 
         NULL);
@@ -314,8 +333,15 @@ void construct_solution(){
         2, 
         sizeof(cl_mem), 
         &bufferOutput);
+    status |= clSetKernelArg(
+        kernel, 
+        3, 
+        sizeof(cl_mem), 
+        &bufferK);
 
-
+    if (status < 0) {
+        fprintf(stderr, "%s\n", "Error when setting arguments!");
+    }
     //-----------------------------------------------------
     // STEP 11: Enqueue the kernel for execution
     //----------------------------------------------------- 
