@@ -86,8 +86,8 @@ void findRoute(__global int *graph,
 	// graph has size edges*4
 	// output has size k?
 	int num_edges = k*(k-1)/2;
-	float alpha = 2.0;
-	float beta = 2.0;             
+	double alpha = 2.0;
+	double beta = 2.0;             
 	int start_position = get_global_id(0);
 	int current_position = start_position;
 	
@@ -97,47 +97,21 @@ void findRoute(__global int *graph,
 		double sum = 0.0;
 		for (int i = 0; i < num_edges; i++){
 			int edge_start = i*4;
+			int possible_goal;
 			if (graph[edge_start]==current_position){
-				// can take this node
-				messages[0] = 'a';
-				messages[1] = current_position + '0';
-				messages[2] = graph[edge_start] + '0';
-				messages[3] = (edge_start+1) + '0';
-				int possible_goal = edge_start+1;
-				if (not_visited(output, graph, possible_goal+1, k)){
-					messages[4] = 'y';
-					possible_to_move = true;
-					int cost = graph[edge_start + 2];
-					messages[10] = cost + '0';
-					int pheromones = graph[edge_start + 3];
-					messages[7] = pheromones + '0';
-					double thao = pow(pheromones, alpha);
-					messages[8] = thao + '0';
-					double attr = pow(cost, -beta);
-					messages[9] = attr + '0';
-					double nomin = thao * attr;
-					messages[5] = nomin + '0';
-					sum = sum + nomin;
-					messages[6] = sum + '0';
-					add_nominative(next_moves, nomin, edge_start, k);
-				}
+				possible_goal = edge_start+1;
 			} else if (graph[edge_start+1]==current_position){
-				messages[0] = 'b';
-				messages[1] = current_position + '0';
-				messages[2] = graph[edge_start+1] + '0';
-				messages[3] = (edge_start) + '0';
-				int possible_goal = edge_start;
-				if (not_visited(output, graph, possible_goal-1, k)){
-					messages[4] = 'y';
-					possible_to_move = true;
-					int cost = graph[edge_start + 2];
-					int pheromones = graph[edge_start + 3];
-					double thao = pow(pheromones, alpha);
-					double attr = pow(cost, -beta);
-					double nomin = thao * attr;
-					sum = sum + nomin;
-					add_nominative(next_moves, nomin, edge_start, k);
-				}
+				possible_goal = edge_start;
+			}
+			if (not_visited(output, graph, possible_goal+1, k)){
+				possible_to_move = true;
+				int cost = graph[edge_start + 2];
+				int pheromones = graph[edge_start + 3];
+				double thao = pow(pheromones, alpha);
+				double attr = pow(cost, -beta);
+				double nomin = thao * attr;
+				sum = sum + nomin;
+				add_nominative(next_moves, nomin, edge_start, k);
 			}
 			return; // todo remove
 		}
