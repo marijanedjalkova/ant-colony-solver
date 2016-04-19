@@ -79,6 +79,8 @@ void findRoute(__global int *graph,
 { 	
 
 	int k = constK[0];
+	messages[0] = "k=";
+	messages[1] = k;
 	//next_moves has size k*2
 	// graph has size edges*4
 	// output has size k?
