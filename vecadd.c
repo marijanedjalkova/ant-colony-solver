@@ -45,13 +45,12 @@ void create_graph(int elements){
     int lastj = 1;
     for (int i = 0; i < elements; i++){
         for (int j = 0; j < 4; j++){
-            if (j==0){
+            if (j == 0){
                 if (lastj == k){
                     lasti = lasti + 1;
                     lastj = lasti + 1;
                 }
                 graph[i*4+j] = lasti;
-                continue;
             } 
             if (j == 1){
                 if (lastj == k){
@@ -60,17 +59,14 @@ void create_graph(int elements){
                 }
                 graph[i*4+j] = lastj;
                 lastj = lastj + 1;
-                continue;
             }  
             if (j == 2){
                 // cost
-                graph[i*4+j] = 1;
-                continue;
+                graph[i*4+j] = (i+j) % 4;
             }  
-            if (j = 3){
+            if (j == 3){
                 //pheromones
                 graph[i*4+j] = i % 7 + 1;
-                continue;
             }
         }
     }
