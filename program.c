@@ -1,29 +1,73 @@
+bool not_visited(__global int* output, int position){
+	for (int i = 0; i < 5; i++){
+		int current_position = i * 4;
+		if (output[current_position] == position){
+			return false;
+		}
+	}
+	return true;
+} 
+
+void add_nominative(__global double* next_moves, double nomin){
+	int i = 0;
+	bool done = false;
+	for (i = 0; i < 5; i++){
+		if (!done){
+			if (next_moves[i]<0){
+				next_moves[i] = nomin;
+				done = true;
+			}
+		}
+	}
+}
+
+
 __kernel                                            
-void findRoute(__global int *graph,                        
+void findRoute(__global int *graph,
+			__global double* next_moves,                        
             __global int *output)                        
 {
-	// Get the work-item’s unique ID
-	// an edge is defined by the id.
-	// start of the edge info is idx*4 
-	/*                
-    int idx = get_global_id(0);
-    int edge_index = idx;
-    end1 = graph[edge_index*4];
-    end2 = graph[edge_index*4 + 1];
-    cost = graph[edge_index*4 + 2];
-    pheromones = graph[edge_index*4 + 3];
-    for (int i = 0; i < 10; i=i+4){
-   	    if (i != edge_index){
-            if (graph[i] == end1){
+	// assume output is of side k*4? 
+	
+	float alpha = 2.0;
+	float beta = 2.0;             
+    int start_position = get_global_id(0);
+    int current_position = start_position;
+    double sum = 0.1;
+    for (int i = 0; i < 10; i++){
+    	int edge_start = i*4;
+   	    if (graph[edge_start]==current_position){
+   	    	// can take this node
+   	    	if (not_visited(output, edge_start)){
+			    int end2 = graph[edge_start + 1];
+			    int cost = graph[edge_start + 2];
+			    int pheromones = graph[edge_start + 3];
+			    double nomin = 0.0;
+			    double thao = 0.0;
+			    double attr = 0.0;
+			    thao = pow(pheromones, alpha);
+			    attr = pow(cost, -beta);
+			    nomin = thao * attr;
+			    sum = sum + nomin;
+			    add_nominative(next_moves, nomin);
+   	    	}
+   	    } else if (graph[edge_start+1]==current_position){
 
-            }
    	    }
-    }*/
+    }
+    for (int i = 0; i < 5; i++){
+    	next_moves[i] = next_moves[i] / sum;
+    }
+    
+    
+    
    // find allowed edges
    // calculate each TN
    // sum them up to find the sum
    //calculate each probability
-   int idx = get_global_id(0);
-   output[idx] = idx;
 
-}           
+} 
+
+
+
+

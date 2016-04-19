@@ -14,6 +14,8 @@ char* programSource ="";
 
 int * graph = NULL;
 int * output = NULL;
+double * next_moves = NULL;
+
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
@@ -21,10 +23,11 @@ size_t globalWorkSize[1];
 cl_int status;  
 cl_mem bufferGraph; // input
 cl_mem bufferOutput; // output
+cl_mem bufferNext;
 cl_context context = NULL;   
 cl_command_queue cmdQueue;
 int elements;
-size_t datasize;
+size_t datasize, graphDatasize, nextDatasize, outputDatasize;
 bool stop = false;
 cl_program program;
 
@@ -91,8 +94,15 @@ int read_program(){
 void initialise(){
     elements = k*(k-1)/2;
     datasize = sizeof(int)*4*elements;
+    graphDatasize = sizeof(int)*4*elements;
+    nextDatasize = sizeof(double)*k;
+    outputDatasize = sizeof(int)*k*k;
     graph = (int*)malloc(sizeof(int)*datasize);
     output = (int*)malloc(sizeof(int)*datasize);
+    next_moves = (double*)malloc(sizeof(double)*k);
+    for (int i = 0; i <k; i++){
+        next_moves[i] = -1;
+    }
     read_program();
     create_graph(elements);
     initialise_output(elements);
@@ -161,14 +171,21 @@ void initialise(){
     bufferGraph = clCreateBuffer(
         context, 
         CL_MEM_READ_ONLY,                         
-        datasize, 
+        graphDatasize, 
+        NULL, 
+        &status);
+
+    bufferNext = clCreateBuffer(
+        context, 
+        CL_MEM_READ_WRITE,                         
+        nextDatasize, 
         NULL, 
         &status);
 
     bufferOutput = clCreateBuffer(
         context, 
-        CL_MEM_WRITE_ONLY,                 
-        datasize, 
+        CL_MEM_READ_WRITE,                 
+        outputDatasize, 
         NULL, 
         &status);
     
@@ -181,7 +198,18 @@ void initialise(){
         bufferGraph, 
         CL_FALSE, 
         0, 
-        datasize,                         
+        graphDatasize,                         
+        graph, 
+        0, 
+        NULL, 
+        NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferNext, 
+        CL_FALSE, 
+        0, 
+        nextDatasize,                         
         graph, 
         0, 
         NULL, 
@@ -279,6 +307,11 @@ void construct_solution(){
     status |= clSetKernelArg(
         kernel, 
         1, 
+        sizeof(cl_mem), 
+        &bufferNext);
+    status |= clSetKernelArg(
+        kernel, 
+        2, 
         sizeof(cl_mem), 
         &bufferOutput);
 
