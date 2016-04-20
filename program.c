@@ -124,11 +124,6 @@ void findRoute(__global int *graph,
 				double nomin = thao * attr;
 				sum = sum + nomin;
 				add_nominative(next_moves, nomin, edge_start, k, idx, messages);
-				/*if (idx==0){
-					for (int i = idx*k*2; i < idx*k*2+k*2; i++){
-						messages[i] = next_moves[i];
-					}
-				}*/
 			}
 			
 		}

@@ -12,6 +12,7 @@ char* programSource ="";
 
 const int k = 5;
 
+int loopCount;
 int * graph = NULL;
 int * output = NULL;
 double * next_moves = NULL;
@@ -99,6 +100,7 @@ int read_program(){
 }
 
 void initialise(){
+    loopCount = 0;
     elements = k*(k-1)/2;
     datasize = sizeof(int)*4*elements;
     graphDatasize = sizeof(int)*4*elements;
@@ -322,7 +324,7 @@ void initialise(){
 }
 
 bool finished(){
-    return stop == true;
+    return loopCount>1000;
 }
 
 void process_result(){
@@ -333,14 +335,43 @@ void process_result(){
         }
         printf("\n");
     }
-    
+    /*
     for(int i = 0; i < k*k*4; i++){
         printf("%d: %f \n",i, messages[i]);
-    }
+    }*/
 }
 
 void global_update_pheromones(){
-    
+    for (int i =0; i< k-1; i++){
+        if (i % (k-1) !=0){
+            int end1 = output[i];
+            int end2 = output[i+1];
+            // find the edge and reduce the pheromones a little bit
+            for (int j=0; j < elements; j++){
+                int graph_index = elements*4;
+                if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
+                    ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
+                    graph[graph_index + 3] = graph[graph_index+3]-1; //evaporation
+                }
+            }
+        }
+        
+    }
+    for (int i =0; i< k-1; i++){
+        if (i % (k-1) !=0){
+            int end1 = output[i];
+            int end2 = output[i+1];
+            // find the edge and reduce the pheromones a little bit
+            for (int j=0; j < elements; j++){
+                int graph_index = elements*4;
+                if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
+                    ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
+                    graph[graph_index + 3] = graph[graph_index+3]+10; //addition(?)
+                }
+            }
+        }
+        
+    }
 }
 
 void cleanup(){
@@ -459,7 +490,7 @@ int aco(){
     while (!finished()){
         construct_solution();
         global_update_pheromones();
-        stop = true;
+        loopCount++;
     }
 }
 
