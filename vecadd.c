@@ -360,7 +360,7 @@ void initialise(){
 }
 
 bool finished(){
-    return loopCount>10;
+    return loopCount>100;
 }
 
 void process_result(){
@@ -373,13 +373,14 @@ void process_result(){
         }
         printf("\n");
     }
-    /*
-    for(int i = 0; i < k*k*4; i++){
-        printf("%d: %f \n",i, messages[i]);
-    }*/
+
 }
 
 void global_update_pheromones(){
+    double* costs = (double*)malloc(sizeof(double)*(k-1));
+    for (int i = 0; i < k-1; i++){
+        costs[i] = 0.0;
+    }
     for (int rec = 0; rec <k; rec++){
         for (int i =0; i< k-1; i++){
             if (((i>0) && (i % (k-1) !=0) )|| (i==0)){
@@ -390,11 +391,14 @@ void global_update_pheromones(){
                     if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
                         ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
                         graph[graph_index + 3] = graph[graph_index+3]*0.97; //evaporation
+                        costs[rec] = costs[rec] + graph[graph_index + 3];
                     } 
                 }
             }  
         }
     }
+    
+
     for (int rec = 0; rec <k; rec++){
         for (int i =0; i< k-1; i++){
             if (((i>0) && (i % (k-1) !=0) )|| (i==0)){
@@ -405,13 +409,13 @@ void global_update_pheromones(){
                     int graph_index = j*4;
                     if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
                         ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
-                        graph[graph_index + 3] = graph[graph_index+3]*1.3; //addition(?)
+                        graph[graph_index + 3] = graph[graph_index+3] + (1.0/costs[rec]); //addition
                     }
                 }
             }
-            
         }
     }
+    free(costs);
     for(int i = 0; i < k*k; i++){
         output[i] = -1.0;
     }
