@@ -10,12 +10,14 @@ bool not_visited(__global int* output, __global int* graph, int position, int k,
 	return true;
 } 
 
-void add_nominative(__global double* next_moves, double nomin, int edge_index_in_graph, int k, int idx){
+void add_nominative(__global double* next_moves, double nomin, int edge_index_in_graph, int k, int idx, __global double* messages){
 	// add to YOUR area of next_moves
 	for (int i = idx*k*2; i < idx*k*2+k*2; i++){
 		if (next_moves[i]<0){
 			next_moves[i] = nomin;
 			next_moves[i+1] = edge_index_in_graph;
+			messages[i] = nomin;
+			messages[i+1] = edge_index_in_graph;
 			return;
 		}
 	}
@@ -74,7 +76,7 @@ void findRoute(__global int *graph,
 			__global double* next_moves,                        
 			__global int *output,
 			__global int* constK,
-			__global char* messages
+			__global double* messages
 			)                        
 { 	
 	int k = constK[0];
@@ -87,6 +89,7 @@ void findRoute(__global int *graph,
 	int idx = get_global_id(0);
 	int current_position = idx;
 	bool possible_to_move = true;
+	int count = 0;
 	while(possible_to_move){
 		possible_to_move = false;
 		double sum = 0.0;
@@ -97,12 +100,17 @@ void findRoute(__global int *graph,
 			if (graph[edge_start]==current_position){
 				possible_goal = edge_start+1;
 				fits = true;
-			} else {
+				int index = 99-idx*k-i;
+				messages[index]= i;
+			} else if(graph[edge_start+1]==current_position) {
 				possible_goal = edge_start;
 				fits = true;
+				int index = 99-idx*k-i;
+				messages[index]= i;
 			}
 			
 			if (fits && not_visited(output, graph, (possible_goal+1), k, idx)){
+				
 				possible_to_move = true;
 				int cost = graph[edge_start + 2];
 				int pheromones = graph[edge_start + 3];
@@ -110,7 +118,7 @@ void findRoute(__global int *graph,
 				double attr = pow(cost, -beta);
 				double nomin = thao * attr;
 				sum = sum + nomin;
-				add_nominative(next_moves, nomin, edge_start, k, idx);
+				add_nominative(next_moves, nomin, edge_start, k, idx, messages);
 			}
 		}
 		if (possible_to_move){
@@ -134,7 +142,10 @@ void findRoute(__global int *graph,
 		} else {
 			return;
 		}
-		//return; // TODO remove this
+		count = count + 1;
+		if (count==1){
+			return;
+		}
 	}
 	
 } 

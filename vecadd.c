@@ -15,7 +15,7 @@ const int k = 5;
 int * graph = NULL;
 int * output = NULL;
 double * next_moves = NULL;
-int* messages = NULL;
+double* messages = NULL;
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
@@ -62,7 +62,7 @@ void create_graph(int elements){
             }  
             if (j == 2){
                 // cost
-                graph[i*4+j] = (i+j) % 4;
+                graph[i*4+j] = (i+j) % 4+1;
             }  
             if (j == 3){
                 //pheromones
@@ -111,10 +111,10 @@ void initialise(){
         next_moves[i] = -1;
     }
 
-    msgSize = sizeof(int)*k*k*4;
-    messages = (int*)malloc(msgSize);
+    msgSize = sizeof(double)*k*k*4;
+    messages = (double*)malloc(msgSize);
     for (int i = 0; i < k*k*4; i++){
-        messages[i] = -1;
+        messages[i] = -1.0;
     }
     read_program();
     create_graph(elements);
@@ -331,8 +331,8 @@ void process_result(){
         printf("Output: %d \n", output[i]);
     }
     
-    for(int i = 0; i < 20; i++){
-        printf("%d: %d,   ",i, messages[i]);
+    for(int i = 0; i < k*k*4; i++){
+        printf("%d: %f \n",i, messages[i]);
     }
 }
 
