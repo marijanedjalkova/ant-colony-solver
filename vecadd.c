@@ -74,7 +74,7 @@ void create_graph(int elements){
 } 
 
 void initialise_output(int k){
-    for (int i = 0; i < k; i++){
+    for (int i = 0; i < k*k; i++){
         output[i] = -1;
     }
 }
@@ -102,12 +102,12 @@ void initialise(){
     elements = k*(k-1)/2;
     datasize = sizeof(int)*4*elements;
     graphDatasize = sizeof(int)*4*elements;
-    nextDatasize = sizeof(double)*k*2;
-    outputDatasize = sizeof(int)*k;
+    nextDatasize = sizeof(double)*k*2*k;
+    outputDatasize = sizeof(int)*k*k;
     graph = (int*)malloc(graphDatasize);
     output = (int*)malloc(outputDatasize);
     next_moves = (double*)malloc(nextDatasize);
-    for (int i = 0; i <k; i++){
+    for (int i = 0; i <k*k*2; i++){
         next_moves[i] = -1;
     }
 
