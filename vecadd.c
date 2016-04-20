@@ -108,7 +108,7 @@ void initialise(){
     output = (int*)malloc(outputDatasize);
     next_moves = (double*)malloc(nextDatasize);
     for (int i = 0; i <k*k*2; i++){
-        next_moves[i] = -1;
+        next_moves[i] = -1.0;
     }
 
     msgSize = sizeof(double)*k*k*4;
@@ -328,7 +328,10 @@ bool finished(){
 void process_result(){
     
     for(int i = 0; i < k; i++) {
-        printf("Output: %d \n", output[i]);
+        for (int j = 0; j <k; j++){
+            printf("%d-", output[i*k+j]);
+        }
+        printf("\n");
     }
     
     for(int i = 0; i < k*k*4; i++){
@@ -337,7 +340,7 @@ void process_result(){
 }
 
 void global_update_pheromones(){
-
+    
 }
 
 void cleanup(){

@@ -12,11 +12,13 @@ bool not_visited(__global int* output, __global int* graph, int position, int k,
 
 void add_nominative(__global double* next_moves, double nomin, int edge_index_in_graph, int k, int idx, __global double* messages){
 	// add to YOUR area of next_moves
+	
 	for (int i = idx*k*2; i < idx*k*2+k*2; i=i+2){
-		if (next_moves[i]<0){
+		double s =next_moves[i]*(1.0); 
+		if (next_moves[i] < 0){
 			next_moves[i] = nomin;
 			next_moves[i+1] = edge_index_in_graph;
-			return;
+			break;
 		}
 	}
 }
@@ -42,7 +44,8 @@ int get_next_move(__global double* next_moves, double random, int k, int idx){
 	int choice = -1;
 	// pick YOUR area for next moves
 	for (int i = idx*k*2; i<idx*k*2+k*2; i=i+2){
-		if (next_moves[i]>-1){
+		double s = next_moves[i]*(1.0);
+		if (next_moves[i]>-1.0){
 			if ((sum + next_moves[i]) >=random){
 				choice = next_moves[i+1];
 				// i + 1 because returning the second value from the tuple
@@ -51,9 +54,7 @@ int get_next_move(__global double* next_moves, double random, int k, int idx){
 			} else {
 				sum = sum + next_moves[i];
 			}
-		} else {
-			break;
-		}	
+		}
 	}
 	return choice;
 }
@@ -61,7 +62,7 @@ int get_next_move(__global double* next_moves, double random, int k, int idx){
 void add_to_array(__global int *output, int k, int value, int idx, __global double* messages){
 	// add to YOUR area of output
 	for (int i = idx*k; i <idx*k+k ; i++){
-		if (output[i] == -1){
+		if (output[i] == -1.0){
 			output[i] = value;
 			return;
 		}
@@ -102,6 +103,7 @@ void findRoute(__global int *graph,
 			int edge_start = i*4;
 			int possible_goal;
 			bool fits = false;
+			
 			if (graph[edge_start]==current_position){
 				possible_goal = edge_start+1;
 				fits = true;
@@ -111,8 +113,9 @@ void findRoute(__global int *graph,
 			}
 			
 			if (fits && not_visited(output, graph, possible_goal, k, idx)){
-				int index = 99-idx*k-i;
-				messages[index]= i;
+				if(idx==0){
+					messages[i] = possible_goal;
+				}
 				possible_to_move = true;
 				int cost = graph[edge_start + 2];
 				int pheromones = graph[edge_start + 3];
@@ -121,7 +124,13 @@ void findRoute(__global int *graph,
 				double nomin = thao * attr;
 				sum = sum + nomin;
 				add_nominative(next_moves, nomin, edge_start, k, idx, messages);
+				/*if (idx==0){
+					for (int i = idx*k*2; i < idx*k*2+k*2; i++){
+						messages[i] = next_moves[i];
+					}
+				}*/
 			}
+			
 		}
 		if (possible_to_move){
 			for (int i = idx*k*2; i < idx*k*2+k*2; i=i+2){
@@ -129,6 +138,7 @@ void findRoute(__global int *graph,
 			}
 			double random = get_random();
 			int edge_choice_index = get_next_move(next_moves, random, k, idx);
+			
 			// in that edge, one value is our current position and the other value
 			// is the next node
 			int next_node = -1;
@@ -139,17 +149,14 @@ void findRoute(__global int *graph,
 				// e.g. edge 2-1 and we are in 1. Put 2 in output and into current pos
 				next_node = graph[edge_choice_index];
 			}
+			//messages[99-idx*10-count-1]=next_node;
 			add_to_array(output, k, next_node, idx, messages);
 			current_position = next_node;
 		} else {
-			//messages[99-idx]=999.0;
 			return;
 		}
 		clear_next_moves(next_moves, k, idx);
 		count = count + 1;
-		/*if (count==3){
-			return;
-		}*/
 	}
 	
 } 
