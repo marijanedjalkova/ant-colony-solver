@@ -1,4 +1,4 @@
-bool not_visited(__global int* output, __global int* graph, int position, int k, int idx){
+bool not_visited(__global double* output, __global double* graph, int position, int k, int idx){
 	// check YOUR area of output
 	int start = k * idx;
 	int end = k*idx+k;
@@ -12,28 +12,25 @@ bool not_visited(__global int* output, __global int* graph, int position, int k,
 
 void add_nominative(__global double* next_moves, double nomin, int edge_index_in_graph, int k, int idx, __global double* messages){
 	// add to YOUR area of next_moves
-	
 	for (int i = idx*k*2; i < idx*k*2+k*2; i=i+2){
-		double s =next_moves[i]*(1.0); 
-		if (next_moves[i] < 0){
+		if (next_moves[i] == -1.0){
 			next_moves[i] = nomin;
+			//messages[idx*k+i] = nomin;
 			next_moves[i+1] = edge_index_in_graph;
 			break;
 		}
 	}
 }
 
-double get_random(){
-	unsigned short lfsr = 0xACE1u;
-	unsigned bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
-	lfsr =  (lfsr >> 1) | (bit << 15);
-	double res = lfsr* 1.0;
+double get_random(__global double* messages, int k, int idx, int count, int yid){
+	/*
 	if (res>1){
 		while(res > 1){
 			res = res / 10.0;
 		}
 	}
-	return res;
+	messages[idx*k]=res;*/
+	return 0.0;
 }
 
 int get_next_move(__global double* next_moves, double random, int k, int idx){
@@ -59,7 +56,7 @@ int get_next_move(__global double* next_moves, double random, int k, int idx){
 	return choice;
 }
 
-void add_to_array(__global int *output, int k, int value, int idx, __global double* messages){
+void add_to_array(__global double *output, int k, double value, int idx, __global double* messages){
 	// add to YOUR area of output
 	for (int i = idx*k; i <idx*k+k ; i++){
 		if (output[i] == -1.0){
@@ -77,9 +74,9 @@ void clear_next_moves(__global double* next_moves, int k, int idx){
 
 
 __kernel                                            
-void findRoute(__global int *graph,
+void findRoute(__global double *graph,
 			__global double* next_moves,                        
-			__global int *output,
+			__global double *output,
 			__global int* constK,
 			__global double* messages
 			)                        
@@ -92,10 +89,12 @@ void findRoute(__global int *graph,
 	double alpha = 2.0;
 	double beta = 2.0;             
 	int idx = get_global_id(0);
+	int idy = get_global_id(1);
 	int current_position = idx;
 	add_to_array(output, k, current_position, idx, messages);
 	bool possible_to_move = true;
 	int count = 0;
+	
 	while(possible_to_move){
 		possible_to_move = false;
 		double sum = 0.0;
@@ -111,14 +110,10 @@ void findRoute(__global int *graph,
 				possible_goal = edge_start;
 				fits = true;
 			}
-			
 			if (fits && not_visited(output, graph, possible_goal, k, idx)){
-				if(idx==0){
-					messages[i] = possible_goal;
-				}
 				possible_to_move = true;
-				int cost = graph[edge_start + 2];
-				int pheromones = graph[edge_start + 3];
+				double cost = graph[edge_start + 2];
+				double pheromones = graph[edge_start + 3];
 				double thao = pow(pheromones, alpha);
 				double attr = pow(cost, -beta);
 				double nomin = thao * attr;
@@ -131,12 +126,11 @@ void findRoute(__global int *graph,
 			for (int i = idx*k*2; i < idx*k*2+k*2; i=i+2){
 				next_moves[i] = next_moves[i] / sum;
 			}
-			double random = get_random();
+			double random = get_random(messages, k, idx, count, idy);
 			int edge_choice_index = get_next_move(next_moves, random, k, idx);
-			
 			// in that edge, one value is our current position and the other value
 			// is the next node
-			int next_node = -1;
+			double next_node = -1.0;
 			if (current_position == graph[edge_choice_index]){
 				// e.g. edge 1-2 and we are in 1. Put 2 in output and into current pos
 				next_node = graph[edge_choice_index + 1];
@@ -144,7 +138,8 @@ void findRoute(__global int *graph,
 				// e.g. edge 2-1 and we are in 1. Put 2 in output and into current pos
 				next_node = graph[edge_choice_index];
 			}
-			//messages[99-idx*10-count-1]=next_node;
+
+			messages[idx*2] = next_node + 1000;
 			add_to_array(output, k, next_node, idx, messages);
 			current_position = next_node;
 		} else {

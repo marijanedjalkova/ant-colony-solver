@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/types.h>
+#include <math.h>
 
 // OpenCL includes
 #include <CL/cl.h>
@@ -13,8 +14,8 @@ char* programSource ="";
 const int k = 5;
 
 int loopCount;
-int * graph = NULL;
-int * output = NULL;
+double * graph = NULL;
+double * output = NULL;
 double * next_moves = NULL;
 double* messages = NULL;
 cl_kernel kernel = NULL;
@@ -37,7 +38,7 @@ cl_program program;
 void print_graph(int elements){
     for (int i = 0; i < elements; i++){
         int j = i *4;
-        printf("Node: %d - %d, cost: %d, pheromones: %d \n", graph[j], graph[j+1], graph[j+2], graph[j+3]);
+        printf("Node: %f - %f, cost: %f, pheromones: %f \n", graph[j], graph[j+1], graph[j+2], graph[j+3]);
     }
 }
 
@@ -51,23 +52,23 @@ void create_graph(int elements){
                     lasti = lasti + 1;
                     lastj = lasti + 1;
                 }
-                graph[i*4+j] = lasti;
+                graph[i*4+j] = (double)lasti;
             } 
             if (j == 1){
                 if (lastj == k){
                     lasti = lasti + 1;
                     lastj = lasti + 1;
                 }
-                graph[i*4+j] = lastj;
+                graph[i*4+j] =(double) lastj;
                 lastj = lastj + 1;
             }  
             if (j == 2){
                 // cost
-                graph[i*4+j] = (i+j) % 4+1;
+                graph[i*4+j] = (i*4+j)/(j+0.1) + pow(-0.3,i*1.0);
             }  
             if (j == 3){
                 //pheromones
-                graph[i*4+j] = i % 7 + 1;
+                graph[i*4+j] = (i*4+j)/(i+0.1) + pow(-1.0, j*1.0);
             }
         }
     }
@@ -76,7 +77,7 @@ void create_graph(int elements){
 
 void initialise_output(int k){
     for (int i = 0; i < k*k; i++){
-        output[i] = -1;
+        output[i] = -1.0;
     }
 }
 
@@ -102,12 +103,12 @@ int read_program(){
 void initialise(){
     loopCount = 0;
     elements = k*(k-1)/2;
-    datasize = sizeof(int)*4*elements;
-    graphDatasize = sizeof(int)*4*elements;
+    datasize = sizeof(double)*4*elements;
+    graphDatasize = sizeof(double)*4*elements;
     nextDatasize = sizeof(double)*k*2*k;
-    outputDatasize = sizeof(int)*k*k;
-    graph = (int*)malloc(graphDatasize);
-    output = (int*)malloc(outputDatasize);
+    outputDatasize = sizeof(double)*k*k;
+    graph = (double*)malloc(graphDatasize);
+    output = (double*)malloc(outputDatasize);
     next_moves = (double*)malloc(nextDatasize);
     for (int i = 0; i <k*k*2; i++){
         next_moves[i] = -1.0;
@@ -222,7 +223,7 @@ void initialise(){
         fprintf(stderr, "Error while creating a buffer\n");
     }
     
-    //-----------------------------------------------------
+        //-----------------------------------------------------
     // STEP 6: Write host data to device buffers
     //----------------------------------------------------- 
     
@@ -243,7 +244,7 @@ void initialise(){
         CL_TRUE, 
         0, 
         nextDatasize,                         
-        graph, 
+        next_moves, 
         0, 
         NULL, 
         NULL);
@@ -280,6 +281,7 @@ void initialise(){
         0, 
         NULL, 
         NULL);
+
 
 
     //-----------------------------------------------------
@@ -324,28 +326,28 @@ void initialise(){
 }
 
 bool finished(){
-    return loopCount>1000;
+    return loopCount>0;
 }
 
 void process_result(){
     
     for(int i = 0; i < k; i++) {
         for (int j = 0; j <k; j++){
-            printf("%d-", output[i*k+j]);
+            printf("%f~", output[i*k+j]);
         }
         printf("\n");
     }
-    /*
+    
     for(int i = 0; i < k*k*4; i++){
         printf("%d: %f \n",i, messages[i]);
-    }*/
+    }
 }
 
 void global_update_pheromones(){
     for (int i =0; i< k-1; i++){
         if (i % (k-1) !=0){
-            int end1 = output[i];
-            int end2 = output[i+1];
+            double end1 = output[i];
+            double end2 = output[i+1];
             // find the edge and reduce the pheromones a little bit
             for (int j=0; j < elements; j++){
                 int graph_index = elements*4;
@@ -354,13 +356,13 @@ void global_update_pheromones(){
                     graph[graph_index + 3] = graph[graph_index+3]-1; //evaporation
                 }
             }
-        }
-        
+        }  
     }
+
     for (int i =0; i< k-1; i++){
         if (i % (k-1) !=0){
-            int end1 = output[i];
-            int end2 = output[i+1];
+            double end1 = output[i];
+            double end2 = output[i+1];
             // find the edge and reduce the pheromones a little bit
             for (int j=0; j < elements; j++){
                 int graph_index = elements*4;
@@ -371,6 +373,12 @@ void global_update_pheromones(){
             }
         }
         
+    }
+    for(int i = 0; i < k*k; i++){
+        output[i] = -1.0;
+    }
+    for (int i = 0; i < k*k*2; i++){
+        next_moves[i] = -1.0;
     }
 }
 
@@ -399,6 +407,55 @@ void cleanup(){
 }
 
 void construct_solution(){
+
+    //-----------------------------------------------------
+    // STEP 6: Write host data to device buffers
+    //----------------------------------------------------- 
+    
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferGraph, 
+        CL_TRUE, 
+        0, 
+        graphDatasize,                         
+        graph, 
+        0, 
+        NULL, 
+        NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferNext, 
+        CL_TRUE, 
+        0, 
+        nextDatasize,                         
+        next_moves, 
+        0, 
+        NULL, 
+        NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferOutput, 
+        CL_TRUE, 
+        0, 
+        outputDatasize,                         
+        output, 
+        0, 
+        NULL, 
+        NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferMsgs, 
+        CL_TRUE, 
+        0, 
+        msgSize,                         
+        messages, 
+        0, 
+        NULL, 
+        NULL);
+    
     //-----------------------------------------------------
     // STEP 9: Set the kernel arguments
     //----------------------------------------------------- 
@@ -477,6 +534,17 @@ void construct_solution(){
         0, 
         msgSize, 
         messages, 
+        0, 
+        NULL, 
+        NULL);
+
+    clEnqueueReadBuffer(
+        cmdQueue, 
+        bufferNext, 
+        CL_TRUE, 
+        0, 
+        nextDatasize, 
+        next_moves, 
         0, 
         NULL, 
         NULL);
