@@ -15,7 +15,7 @@ const int k = 5;
 int * graph = NULL;
 int * output = NULL;
 double * next_moves = NULL;
-char* messages = NULL;
+int* messages = NULL;
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
@@ -111,10 +111,10 @@ void initialise(){
         next_moves[i] = -1;
     }
 
-    msgSize = sizeof(char)*1000;
-    messages = (char*)malloc(msgSize);
-    for (int i = 0; i < 1000; i++){
-        messages[i] = '.';
+    msgSize = sizeof(int)*k*k*4;
+    messages = (int*)malloc(msgSize);
+    for (int i = 0; i < k*k*4; i++){
+        messages[i] = -1;
     }
     read_program();
     create_graph(elements);
@@ -332,7 +332,7 @@ void process_result(){
     }
     
     for(int i = 0; i < 20; i++){
-        printf("Messages:%d %c\n",i, messages[i]);
+        printf("%d: %d,   ",i, messages[i]);
     }
 }
 
