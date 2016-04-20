@@ -21,6 +21,7 @@ double * next_moves = NULL;
 double* messages = NULL;
 double* rands = NULL;
 double* best_path = NULL;
+double* chapest_path = NULL;
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
@@ -39,6 +40,7 @@ size_t datasize, graphDatasize, nextDatasize, outputDatasize, msgSize, randSize;
 bool stop = false;
 cl_program program;
 double min_costs;
+double max_pheroms;
 
 void print_graph(int elements){
     for (int i = 0; i < elements; i++){
@@ -125,8 +127,10 @@ void initialise(){
     output = (double*)malloc(outputDatasize);
     next_moves = (double*)malloc(nextDatasize);
     best_path = (double*)malloc(sizeof(double)*k);
+    chapest_path = (double*)malloc(sizeof(double)*k);
     for(int i = 0; i < k; i++){
         best_path[i] = -1.0;
+        chapest_path[i] = -1.0;
     }
     for (int i = 0; i <k*k*2; i++){
         next_moves[i] = -1.0;
@@ -366,7 +370,7 @@ void initialise(){
 }
 
 bool finished(){
-    return loopCount>100;
+    return loopCount>100000;
 }
 
 void process_result(){
@@ -384,11 +388,16 @@ void process_result(){
 }
 
 void global_update_pheromones(){
-    double* costs = (double*)malloc(sizeof(double)*(k-1));
-    for (int i = 0; i < k-1; i++){
+    double* costs = (double*)malloc(sizeof(double)*(k));
+    for (int i = 0; i < k; i++){
         costs[i] = 0.0;
     }
+    double* pheroms = (double*)malloc(sizeof(double)*(k));
+    for (int i = 0; i < k; i++){
+        pheroms[i] = 0.0;
+    }
     min_costs = 9999;
+    max_pheroms = 0.0;
     for (int rec = 0; rec <k; rec++){
         for (int i =0; i< k-1; i++){
             if (((i>0) && (i % (k-1) !=0) )|| (i==0)){
@@ -399,8 +408,9 @@ void global_update_pheromones(){
                     if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
                         ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
                         graph[graph_index + 3] = graph[graph_index+3]*0.97; //evaporation
-                        graph[graph_index + 3] = graph[graph_index+3] + (1.0/graph[graph_index+2]); //addition
-                        costs[rec] = costs[rec] + graph[graph_index + 3];
+                        graph[graph_index + 3] = graph[graph_index+3] + (10.0/graph[graph_index+2]); //addition
+                        costs[rec] = costs[rec] + graph[graph_index + 2];
+                        pheroms[rec] = pheroms[rec] + graph[graph_index + 3];
                     } 
                 }
             } 
@@ -409,12 +419,21 @@ void global_update_pheromones(){
             //update best path
             min_costs = costs[rec];
             for(int i = 0; i<k;i++){
+                chapest_path[i] = output[rec*k+i];
+            }
+        }
+        if(pheroms[rec]>max_pheroms){
+            //update best path
+            max_pheroms = pheroms[rec];
+            for(int i = 0; i<k;i++){
                 best_path[i] = output[rec*k+i];
             }
         }
+
     }
     
     free(costs);
+    free(pheroms);
     for(int i = 0; i < k*k; i++){
         output[i] = -1.0;
     }
@@ -626,6 +645,13 @@ void show_result(){
     printf("The best path is:\n");
     for(int i = 0; i < k; i++){
         double d = best_path[i];
+        int num = floor(d);
+        printf("%d->", num);
+    }
+    printf("\nPheromones are %f\n", max_pheroms);
+    printf("The cheapest path is:\n");
+    for(int i = 0; i < k; i++){
+        double d = chapest_path[i];
         int num = floor(d);
         printf("%d->", num);
     }
