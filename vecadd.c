@@ -109,7 +109,6 @@ void initialise_rands(){
         int r = rand() % 100;
         double ra = r / 100.0;
         rands[i] = ra;
-        printf("r %f\n", rands[i]);
     }
 }
 
@@ -386,15 +385,12 @@ void global_update_pheromones(){
             if (((i>0) && (i % (k-1) !=0) )|| (i==0)){
                 double end1 = output[rec*k+i];
                 double end2 = output[rec*k+i+1];
-                printf("Analysing %f and %f\n", end1, end2);
                 for (int j=0; j < elements; j++){
-                    int graph_index = elements*4;
+                    int graph_index = j*4;
                     if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
                         ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
-                        printf("was %f", graph[graph_index + 3]);
                         graph[graph_index + 3] = graph[graph_index+3]*0.97; //evaporation
-                        printf("is now %f\n", graph[graph_index + 3]);
-                    }
+                    } 
                 }
             }  
         }
@@ -406,7 +402,7 @@ void global_update_pheromones(){
                 double end2 = output[rec*k+i+1];
                 // find the edge and reduce the pheromones a little bit
                 for (int j=0; j < elements; j++){
-                    int graph_index = elements*4;
+                    int graph_index = j*4;
                     if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
                         ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
                         graph[graph_index + 3] = graph[graph_index+3]*1.3; //addition(?)
