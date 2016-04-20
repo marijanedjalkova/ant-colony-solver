@@ -15,22 +15,14 @@ void add_nominative(__global double* next_moves, double nomin, int edge_index_in
 	for (int i = idx*k*2; i < idx*k*2+k*2; i=i+2){
 		if (next_moves[i] == -1.0){
 			next_moves[i] = nomin;
-			//messages[idx*k+i] = nomin;
 			next_moves[i+1] = edge_index_in_graph;
 			break;
 		}
 	}
 }
 
-double get_random(__global double* messages, int k, int idx, int count, int yid){
-	/*
-	if (res>1){
-		while(res > 1){
-			res = res / 10.0;
-		}
-	}
-	messages[idx*k]=res;*/
-	return 0.0;
+double get_random(__global double* rands, int k, int idx, int count){
+	return rands[idx*k+count];
 }
 
 int get_next_move(__global double* next_moves, double random, int k, int idx){
@@ -78,7 +70,8 @@ void findRoute(__global double *graph,
 			__global double* next_moves,                        
 			__global double *output,
 			__global int* constK,
-			__global double* messages
+			__global double* messages,
+			__global double* rands
 			)                        
 { 	
 	int k = constK[0];
@@ -126,7 +119,7 @@ void findRoute(__global double *graph,
 			for (int i = idx*k*2; i < idx*k*2+k*2; i=i+2){
 				next_moves[i] = next_moves[i] / sum;
 			}
-			double random = get_random(messages, k, idx, count, idy);
+			double random = get_random(rands, k, idx, count);
 			int edge_choice_index = get_next_move(next_moves, random, k, idx);
 			// in that edge, one value is our current position and the other value
 			// is the next node
@@ -138,8 +131,6 @@ void findRoute(__global double *graph,
 				// e.g. edge 2-1 and we are in 1. Put 2 in output and into current pos
 				next_node = graph[edge_choice_index];
 			}
-
-			messages[idx*2] = next_node + 1000;
 			add_to_array(output, k, next_node, idx, messages);
 			current_position = next_node;
 		} else {

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <math.h>
+#include <time.h>
 
 // OpenCL includes
 #include <CL/cl.h>
@@ -18,6 +19,7 @@ double * graph = NULL;
 double * output = NULL;
 double * next_moves = NULL;
 double* messages = NULL;
+double* rands = NULL;
 cl_kernel kernel = NULL;
 cl_platform_id *platforms = NULL;
 cl_device_id *devices = NULL;
@@ -28,10 +30,11 @@ cl_mem bufferOutput; // output
 cl_mem bufferNext;
 cl_mem bufferK;
 cl_mem bufferMsgs;
+cl_mem bufferRands;
 cl_context context = NULL;   
 cl_command_queue cmdQueue;
 int elements;
-size_t datasize, graphDatasize, nextDatasize, outputDatasize, msgSize;
+size_t datasize, graphDatasize, nextDatasize, outputDatasize, msgSize, randSize;
 bool stop = false;
 cl_program program;
 
@@ -100,6 +103,16 @@ int read_program(){
     return 0;
 }
 
+void initialise_rands(){
+    
+    for(int i = 0; i < k*k; i++){
+        int r = rand() % 100;
+        double ra = r / 100.0;
+        rands[i] = ra;
+        printf("r %f\n", rands[i]);
+    }
+}
+
 void initialise(){
     loopCount = 0;
     elements = k*(k-1)/2;
@@ -119,6 +132,11 @@ void initialise(){
     for (int i = 0; i < k*k*4; i++){
         messages[i] = -1.0;
     }
+    time_t t;
+    srand((unsigned) time(&t));
+    randSize = sizeof(double)*k*k;
+    rands = (double*)malloc(randSize);
+    initialise_rands();
     read_program();
     create_graph(elements);
     initialise_output(k);
@@ -218,6 +236,13 @@ void initialise(){
         msgSize, 
         NULL, 
         &status);
+
+    bufferRands = clCreateBuffer(
+        context, 
+        CL_MEM_READ_ONLY,                 
+        randSize, 
+        NULL, 
+        &status);
     
     if (status<0){
         fprintf(stderr, "Error while creating a buffer\n");
@@ -282,6 +307,16 @@ void initialise(){
         NULL, 
         NULL);
 
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferRands, 
+        CL_TRUE, 
+        0, 
+        randSize,                         
+        rands, 
+        0, 
+        NULL, 
+        NULL);
 
 
     //-----------------------------------------------------
@@ -326,53 +361,60 @@ void initialise(){
 }
 
 bool finished(){
-    return loopCount>0;
+    return loopCount>10;
 }
 
 void process_result(){
     
     for(int i = 0; i < k; i++) {
         for (int j = 0; j <k; j++){
-            printf("%f~", output[i*k+j]);
+            double r = output[i*k+j];
+            int res = floor(r);
+            printf("%d~", res);
         }
         printf("\n");
     }
-    
+    /*
     for(int i = 0; i < k*k*4; i++){
         printf("%d: %f \n",i, messages[i]);
-    }
+    }*/
 }
 
 void global_update_pheromones(){
-    for (int i =0; i< k-1; i++){
-        if (i % (k-1) !=0){
-            double end1 = output[i];
-            double end2 = output[i+1];
-            // find the edge and reduce the pheromones a little bit
-            for (int j=0; j < elements; j++){
-                int graph_index = elements*4;
-                if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
-                    ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
-                    graph[graph_index + 3] = graph[graph_index+3]-1; //evaporation
+    for (int rec = 0; rec <k; rec++){
+        for (int i =0; i< k-1; i++){
+            if (((i>0) && (i % (k-1) !=0) )|| (i==0)){
+                double end1 = output[rec*k+i];
+                double end2 = output[rec*k+i+1];
+                printf("Analysing %f and %f\n", end1, end2);
+                for (int j=0; j < elements; j++){
+                    int graph_index = elements*4;
+                    if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
+                        ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
+                        printf("was %f", graph[graph_index + 3]);
+                        graph[graph_index + 3] = graph[graph_index+3]*0.97; //evaporation
+                        printf("is now %f\n", graph[graph_index + 3]);
+                    }
                 }
-            }
-        }  
-    }
-
-    for (int i =0; i< k-1; i++){
-        if (i % (k-1) !=0){
-            double end1 = output[i];
-            double end2 = output[i+1];
-            // find the edge and reduce the pheromones a little bit
-            for (int j=0; j < elements; j++){
-                int graph_index = elements*4;
-                if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
-                    ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
-                    graph[graph_index + 3] = graph[graph_index+3]+10; //addition(?)
-                }
-            }
+            }  
         }
-        
+    }
+    for (int rec = 0; rec <k; rec++){
+        for (int i =0; i< k-1; i++){
+            if (((i>0) && (i % (k-1) !=0) )|| (i==0)){
+                double end1 = output[rec*k+i];
+                double end2 = output[rec*k+i+1];
+                // find the edge and reduce the pheromones a little bit
+                for (int j=0; j < elements; j++){
+                    int graph_index = elements*4;
+                    if (((graph[graph_index]==end1)&&(graph[graph_index+1]==end2))||
+                        ((graph[graph_index]==end2)&&(graph[graph_index+1]==end1))){
+                        graph[graph_index + 3] = graph[graph_index+3]*1.3; //addition(?)
+                    }
+                }
+            }
+            
+        }
     }
     for(int i = 0; i < k*k; i++){
         output[i] = -1.0;
@@ -380,6 +422,7 @@ void global_update_pheromones(){
     for (int i = 0; i < k*k*2; i++){
         next_moves[i] = -1.0;
     }
+    initialise_rands();
 }
 
 void cleanup(){
@@ -395,6 +438,7 @@ void cleanup(){
     clReleaseMemObject(bufferOutput);
     clReleaseMemObject(bufferNext);
     clReleaseMemObject(bufferMsgs);
+    clReleaseMemObject(bufferRands);
     clReleaseContext(context);
 
     // Free host resources
@@ -402,6 +446,7 @@ void cleanup(){
     free(output);
     free(messages);
     free(next_moves);
+    free(rands);
     free(platforms);
     free(devices);
 }
@@ -455,6 +500,17 @@ void construct_solution(){
         0, 
         NULL, 
         NULL);
+
+    status = clEnqueueWriteBuffer(
+        cmdQueue, 
+        bufferRands, 
+        CL_TRUE, 
+        0, 
+        randSize,                         
+        rands, 
+        0, 
+        NULL, 
+        NULL);
     
     //-----------------------------------------------------
     // STEP 9: Set the kernel arguments
@@ -489,6 +545,12 @@ void construct_solution(){
         4, 
         sizeof(cl_mem), 
         &bufferMsgs);
+
+    status |= clSetKernelArg(
+        kernel, 
+        5, 
+        sizeof(cl_mem), 
+        &bufferRands);
 
     if (status < 0) {
         fprintf(stderr, "%s\n", "Error when setting arguments!");
